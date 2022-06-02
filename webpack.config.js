@@ -1,5 +1,5 @@
 const path = require('path');
-const devServerPort = 3000;
+const devServerPort = 4000;
 
 module.exports = {
     entry: path.join(__dirname, './src/index.ts'),

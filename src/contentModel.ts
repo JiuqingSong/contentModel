@@ -4,15 +4,20 @@ import wrap from './roosterjs/wrap';
 import { Alignment } from './roosterjs/Alignment';
 import { Direction } from './roosterjs/Direction';
 
-interface ContentStateItem {}
+export interface ContentModelItem {}
 
-const enum VerticalAlign {
+export const enum VerticalAlign {
     None,
     Superscript,
     Subscript,
 }
 
-interface SegmentFormat extends ContentStateItem {
+export const enum SelectionType {
+    Start,
+    End,
+}
+
+export interface SegmentFormat extends ContentModelItem {
     font?: string;
     size?: string;
     color?: string;
@@ -23,50 +28,60 @@ interface SegmentFormat extends ContentStateItem {
     underline?: boolean;
     strikeThrough?: boolean;
     verticalAlign?: VerticalAlign;
+
+    href?: string;
 }
 
-interface BlockFormat extends ContentStateItem {
+export interface BlockFormat extends ContentModelItem {
     align?: Alignment;
     direction?: Direction;
     indentation?: string;
 }
 
-interface Segment extends ContentStateItem {
+export interface Segment extends ContentModelItem {
     text: string;
     format: SegmentFormat;
+    selection?: SelectionType;
 }
 
-interface Block extends ContentStateItem {
+export interface Block extends ContentModelItem {
     segments: Segment[];
     format: BlockFormat;
 }
 
-// interface ListItem extends ContentStateItem {
+// interface ListItem extends ContentModelItem {
 //     listType: ListType[];
 //     child: Block;
 // }
 
-interface ContentState {
+export interface ContentModel {
     blocks: Block[];
 }
 
-export default function createContentModel(input: Node | string): ContentState {
+export default function createContentModel(input: Node | string): ContentModel {
     const root =
         typeof input == 'string' ? new DOMParser().parseFromString(input, 'text/html').body : input;
-    const contentState: ContentState = {
+    const contentModel: ContentModel = {
         blocks: [],
     };
 
-    addBlock(contentState, {}, {});
-    processNode(contentState, root, {}, {});
-    normalizeState(contentState);
+    let range: Range;
+    try {
+        range = document.getSelection().getRangeAt(0);
+    } catch {}
 
-    return contentState;
+    range = range || document.createRange();
+
+    addBlock(contentModel, {}, {});
+    processNode(contentModel, root, {}, {}, range);
+    normalizeModel(contentModel);
+
+    return contentModel;
 }
 
-function normalizeState(state: ContentState) {
-    for (let i = state.blocks.length - 1; i >= 0; i--) {
-        const block = state.blocks[i];
+function normalizeModel(model: ContentModel) {
+    for (let i = model.blocks.length - 1; i >= 0; i--) {
+        const block = model.blocks[i];
 
         for (let j = block.segments.length - 1; j >= 0; j--) {
             if (isEmptySegment(block.segments[j])) {
@@ -75,13 +90,13 @@ function normalizeState(state: ContentState) {
         }
 
         if (isEmptyBlock(block)) {
-            state.blocks.splice(i, 1);
+            model.blocks.splice(i, 1);
         }
     }
 }
 
 function isEmptySegment(segment: Segment) {
-    return !segment.text;
+    return !segment.text && segment.selection === undefined;
 }
 
 function isEmptyBlock(block: Block) {
@@ -89,18 +104,28 @@ function isEmptyBlock(block: Block) {
 }
 
 function processNode(
-    state: ContentState,
+    model: ContentModel,
     node: Node,
     blockFormat: BlockFormat,
-    segmentFormat: SegmentFormat
+    segmentFormat: SegmentFormat,
+    range: Range
 ) {
     if (safeInstanceOf(node, 'HTMLElement')) {
         switch (getTagOfNode(node)) {
             case 'DIV':
-                processElement(state, node, 'block', blockFormat, segmentFormat);
+
+            // TODO
+            case 'P':
+            case 'BR':
+            case 'OL':
+            case 'UL':
+            case 'LI':
+                processElement(model, node, 'block', blockFormat, segmentFormat, range);
 
                 break;
             case 'SPAN':
+            case 'FONT':
+            case 'A':
             case 'B':
             case 'STRONG':
             case 'I':
@@ -110,31 +135,61 @@ function processNode(
             case 'SUP':
             case 'S':
             case 'STRIKE':
-                processElement(state, node, 'inline', blockFormat, segmentFormat);
+                processElement(model, node, 'inline', blockFormat, segmentFormat, range);
                 break;
 
             case 'BODY':
-                processChildren(state, node, blockFormat, segmentFormat);
+                processChildren(model, node, blockFormat, segmentFormat, range);
                 break;
         }
     } else if (safeInstanceOf(node, 'Text')) {
-        processText(state, node, segmentFormat);
+        let txt = node.nodeValue;
+        let startOffset = range.startContainer == node ? range.startOffset : -1;
+        let endOffset = range.endContainer == node ? range.endOffset : -1;
+
+        if (startOffset >= 0) {
+            const block = processText(model, txt.substring(0, startOffset));
+            processSelection(model.blocks[model.blocks.length - 1], segmentFormat, true);
+
+            addSegment(block, segmentFormat);
+
+            txt = txt.substring(startOffset);
+            endOffset -= startOffset;
+        }
+
+        if (endOffset >= 0) {
+            const block = processText(model, txt.substring(0, endOffset));
+            processSelection(model.blocks[model.blocks.length - 1], segmentFormat, false);
+
+            addSegment(block, segmentFormat);
+            txt = txt.substring(endOffset);
+        }
+
+        processText(model, txt);
     } else {
     }
 }
 
-function processText(state: ContentState, text: Text, segmentFormat: SegmentFormat) {
-    const lastBlock = state.blocks[state.blocks.length - 1];
+function processText(model: ContentModel, text: string): Block {
+    const lastBlock = model.blocks[model.blocks.length - 1];
     const lastSegment = lastBlock.segments[lastBlock.segments.length - 1];
-    lastSegment.text += text.nodeValue;
+    lastSegment.text += text;
+
+    return lastBlock;
+
+    // if (!/^[\r\n]*$/.test(nodeValue)) {
+    // } else if (lastSegment.text) {
+    //     lastSegment.text += ' ';
+    // }
 }
 
 function processElement(
-    state: ContentState,
+    model: ContentModel,
     node: HTMLElement,
     displayDefault: string,
     blockFormat: BlockFormat,
-    segmentFormat: SegmentFormat
+    segmentFormat: SegmentFormat,
+    range: Range
 ) {
     const display = node.style.display || displayDefault;
 
@@ -146,12 +201,12 @@ function processElement(
         case 'inline-grid':
         case 'inline-table':
         case 'contents':
-            processSegment(state, node, blockFormat, segmentFormat);
+            processSegment(model, node, blockFormat, segmentFormat, range);
             break;
         case 'block':
         case 'flex':
         case 'grid':
-            processBlock(state, node, blockFormat, segmentFormat);
+            processBlock(model, node, blockFormat, segmentFormat, range);
             break;
 
         case 'list-item':
@@ -178,41 +233,60 @@ function processElement(
 }
 
 function processSegment(
-    state: ContentState,
+    model: ContentModel,
     node: HTMLElement,
     blockFormat: BlockFormat,
-    segmentFormat: SegmentFormat
+    segmentFormat: SegmentFormat,
+    range: Range
 ) {
-    const lastBlock = state.blocks[state.blocks.length - 1];
+    const lastBlock = model.blocks[model.blocks.length - 1];
     const format = getSegmentFormat(node, segmentFormat);
     addSegment(lastBlock, format);
 
-    processChildren(state, node, blockFormat, format);
+    processChildren(model, node, blockFormat, format, range);
     addSegment(lastBlock, segmentFormat);
 }
 
 function processBlock(
-    state: ContentState,
+    model: ContentModel,
     node: HTMLElement,
     blockFormat: BlockFormat,
-    segmentFormat: SegmentFormat
+    segmentFormat: SegmentFormat,
+    range: Range
 ) {
     const format = getBlockFormat(node, blockFormat);
-    addBlock(state, format, segmentFormat);
+    addBlock(model, format, segmentFormat);
 
-    processChildren(state, node, format, segmentFormat);
-    addBlock(state, blockFormat, segmentFormat);
+    processChildren(model, node, format, segmentFormat, range);
+    addBlock(model, blockFormat, segmentFormat);
 }
 
 function processChildren(
-    state: ContentState,
+    model: ContentModel,
     parent: HTMLElement,
     blockFormat: BlockFormat,
-    segmentFormat: SegmentFormat
+    segmentFormat: SegmentFormat,
+    range: Range
 ) {
+    const startOffset = range.startContainer == parent ? range.startOffset : -1;
+    const endOffset = range.endContainer == parent ? range.endOffset : -1;
+    let index = 0;
+
     for (let child = parent.firstChild; child; child = child.nextSibling) {
-        processNode(state, child, blockFormat, segmentFormat);
+        if (index == startOffset) {
+            processSelection(model.blocks[model.blocks.length - 1], segmentFormat, true);
+        }
+        if (index == endOffset) {
+            processSelection(model.blocks[model.blocks.length - 1], segmentFormat, false);
+        }
+        processNode(model, child, blockFormat, segmentFormat, range);
+        index++;
     }
+}
+
+function processSelection(block: Block, format: SegmentFormat, isStart: boolean) {
+    const segment = addSegment(block, {});
+    segment.selection = isStart ? SelectionType.Start : SelectionType.End;
 }
 
 function addSegment(block: Block, format: SegmentFormat): Segment {
@@ -226,15 +300,14 @@ function addSegment(block: Block, format: SegmentFormat): Segment {
     return newSegment;
 }
 
-function addBlock(state: ContentState, format: BlockFormat, segmentFormat: SegmentFormat): Block {
+function addBlock(model: ContentModel, format: BlockFormat, segmentFormat: SegmentFormat): Block {
     const blockFormat = { ...format };
-
     const newBlock: Block = {
         segments: [],
         format: blockFormat,
     };
 
-    state.blocks.push(newBlock);
+    model.blocks.push(newBlock);
 
     addSegment(newBlock, segmentFormat);
 
@@ -276,10 +349,14 @@ function getSegmentFormat(node: HTMLElement, parentFormat: SegmentFormat) {
         result.color = node.style.color;
     }
 
+    if (tag == 'A' && (<HTMLAnchorElement>node).href) {
+        result.href = node.getAttribute('href');
+    }
+
     getEffectiveStyle(
         node.style.fontWeight,
         tag,
-        ['B'],
+        ['B', 'STRONG'],
         'bold',
         style => (result.bold = parseInt(style) >= 700 || ['bold', 'bolder'].indexOf(style) >= 0)
     );
@@ -359,13 +436,17 @@ function getBlockFormat(node: HTMLElement, parentFormat: BlockFormat) {
     return result;
 }
 
-export function createFragment(state: ContentState, doc: Document): DocumentFragment {
+export function createFragment(
+    model: ContentModel,
+    doc: Document,
+    range?: Range
+): DocumentFragment {
     const fragment = doc.createDocumentFragment();
-    state.blocks.forEach(block => createBlockFromContentState(fragment, block));
+    model.blocks.forEach(block => createBlockFromContentModel(fragment, block, range));
     return fragment;
 }
 
-function createBlockFromContentState(parent: Node, block: Block) {
+function createBlockFromContentModel(parent: Node, block: Block, range?: Range) {
     const div = parent.ownerDocument.createElement('div');
     parent.appendChild(div);
 
@@ -381,75 +462,117 @@ function createBlockFromContentState(parent: Node, block: Block) {
         div.style.textIndent = indentation;
     }
 
-    block.segments.forEach(segment => createSegmentFromContent(div, segment));
+    let previousSegment: Segment | null = null;
+    let previousSpan: HTMLSpanElement | null = null;
+    block.segments.forEach(segment => {
+        if (segment.selection === undefined) {
+            previousSpan = createSegmentFromContent(div, segment, previousSegment, previousSpan);
+
+            previousSegment = segment;
+        } else {
+            // Handle selection
+        }
+    });
 }
 
-function createSegmentFromContent(parent: Node, segment: Segment) {
-    const doc = parent.ownerDocument;
-    const span = doc.createElement('span');
-    parent.appendChild(span);
+function areSameFormats(f1: SegmentFormat, f2: SegmentFormat) {
+    return (
+        f1.font == f2.font &&
+        f1.size == f2.size &&
+        f1.backgroundColor == f2.backgroundColor &&
+        f1.bold == f2.bold &&
+        f1.italic == f2.italic &&
+        f1.underline == f2.underline &&
+        f1.strikeThrough == f2.strikeThrough &&
+        f1.verticalAlign == f2.verticalAlign &&
+        f1.href == f2.href
+    );
+}
 
-    span.appendChild(doc.createTextNode(segment.text));
+function createSegmentFromContent(
+    parent: Node,
+    segment: Segment,
+    previousSegment: Segment | null,
+    previousSpan: HTMLSpanElement | null
+) {
+    if (previousSegment && previousSpan && areSameFormats(segment.format, previousSegment.format)) {
+        previousSpan.textContent += segment.text;
+        return previousSpan;
+    } else {
+        const doc = parent.ownerDocument;
+        const span = doc.createElement('span');
 
-    const {
-        font,
-        size,
-        color,
-        backgroundColor,
-        bold,
-        italic,
-        underline,
-        strikeThrough,
-        verticalAlign,
-    } = segment.format;
+        parent.appendChild(span);
+        span.appendChild(doc.createTextNode(segment.text));
 
-    if (font) {
-        span.style.fontFamily = font;
+        const {
+            font,
+            size,
+            color,
+            backgroundColor,
+            bold,
+            italic,
+            underline,
+            strikeThrough,
+            verticalAlign,
+            href,
+        } = segment.format;
+
+        if (font) {
+            span.style.fontFamily = font;
+        }
+
+        if (size) {
+            span.style.fontSize = size;
+        }
+
+        if (color) {
+            span.style.color = color;
+        }
+
+        if (backgroundColor) {
+            span.style.backgroundColor = backgroundColor;
+        }
+
+        if (href) {
+            const a = wrap(span, 'A') as HTMLAnchorElement;
+            a.href = href;
+        }
+
+        if (bold) {
+            // span.style.fontWeight = 'bold';
+            wrap(span, 'B');
+        }
+
+        if (italic) {
+            // span.style.fontStyle = 'italic';
+            wrap(span, 'I');
+        }
+
+        if (underline) {
+            // span.style.textDecoration += 'underline ';
+            wrap(span, 'U');
+        }
+
+        if (strikeThrough) {
+            // span.style.textDecoration += 'line-through ';
+            wrap(span, 'STRIKE');
+        }
+
+        if (verticalAlign == VerticalAlign.Subscript) {
+            wrap(span, 'SUB');
+        } else if (verticalAlign == VerticalAlign.Superscript) {
+            wrap(span, 'SUP');
+        }
+
+        //     span.style.verticalAlign =
+        //         verticalAlign == VerticalAlign.Subscript
+        //             ? 'sub'
+        //             : verticalAlign == VerticalAlign.Superscript
+        //             ? 'sup'
+        //             : '';
+        // }
+
+        return span;
     }
-
-    if (size) {
-        span.style.fontSize = size;
-    }
-
-    if (color) {
-        span.style.color = color;
-    }
-
-    if (backgroundColor) {
-        span.style.backgroundColor = backgroundColor;
-    }
-
-    if (bold) {
-        // span.style.fontWeight = 'bold';
-        wrap(span, 'B');
-    }
-
-    if (italic) {
-        // span.style.fontStyle = 'italic';
-        wrap(span, 'I');
-    }
-
-    if (underline) {
-        // span.style.textDecoration += 'underline ';
-        wrap(span, 'U');
-    }
-
-    if (strikeThrough) {
-        // span.style.textDecoration += 'line-through ';
-        wrap(span, 'STRIKE');
-    }
-
-    if (verticalAlign == VerticalAlign.Subscript) {
-        wrap(span, 'SUB');
-    } else if (verticalAlign == VerticalAlign.Superscript) {
-        wrap(span, 'SUP');
-    }
-
-    //     span.style.verticalAlign =
-    //         verticalAlign == VerticalAlign.Subscript
-    //             ? 'sub'
-    //             : verticalAlign == VerticalAlign.Superscript
-    //             ? 'sup'
-    //             : '';
-    // }
 }
