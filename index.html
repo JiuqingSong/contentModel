@@ -1,7 +1,60 @@
 <!DOCTYPE html>
 <html>
+    <head>
+        <style>
+            .container {
+                display: flex;
+            }
+            .column {
+                flex: 1 1 auto;
+                width: 50%;
+            }
+            .box {
+                width: 100%;
+                border: solid 1px black;
+                overflow: auto;
+            }
+            #source {
+                height: 45vh;
+            }
+            #modelHTML {
+                height: 25vh;
+            }
+            #model {
+                height: 75vh;
+            }
+            #layout {
+                height: 15vh;
+            }
+            #modelLayout {
+                height: 15vh;
+            }
+        </style>
+    </head>
     <body>
-        <div id="root"></div>
+        <div class="container">
+            <div class="column">
+                <div>Input HTML:</div>
+                <textarea id="source" class="box"></textarea>
+
+                <div>HTML from Content Model:</div>
+                <textarea id="modelHTML" class="box"></textarea>
+            </div>
+            <div class="column">
+                <div>Content Model:</div>
+                <textarea id="model" class="box"></textarea>
+            </div>
+        </div>
+        <div class="container">
+            <div class="column">
+                <div>Layout:</div>
+                <div id="layout" class="box"></div>
+            </div>
+            <div class="column">
+                <div>Layout from Content Model:</div>
+                <div id="modelLayout" class="box"></div>
+            </div>
+        </div>
         <script src="./dist/index.js"></script>
     </body>
 </html>

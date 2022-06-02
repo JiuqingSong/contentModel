@@ -28,6 +28,7 @@ interface SegmentFormat extends ContentStateItem {
 interface BlockFormat extends ContentStateItem {
     align?: Alignment;
     direction?: Direction;
+    indentation?: string;
 }
 
 interface Segment extends ContentStateItem {
@@ -49,14 +50,15 @@ interface ContentState {
     blocks: Block[];
 }
 
-export default function createContentState(html: string): ContentState {
-    const doc = new DOMParser().parseFromString(html, 'text/html');
+export default function createContentModel(input: Node | string): ContentState {
+    const root =
+        typeof input == 'string' ? new DOMParser().parseFromString(input, 'text/html').body : input;
     const contentState: ContentState = {
         blocks: [],
     };
 
     addBlock(contentState, {}, {});
-    processNode(contentState, doc.body, {}, {});
+    processNode(contentState, root, {}, {});
     normalizeState(contentState);
 
     return contentState;
@@ -349,6 +351,11 @@ function getBlockFormat(node: HTMLElement, parentFormat: BlockFormat) {
                 : Alignment.Left;
     }
 
+    const indentation = node.style.textIndent;
+    if (indentation) {
+        result.indentation = indentation;
+    }
+
     return result;
 }
 
@@ -362,13 +369,16 @@ function createBlockFromContentState(parent: Node, block: Block) {
     const div = parent.ownerDocument.createElement('div');
     parent.appendChild(div);
 
-    const { align, direction } = block.format;
+    const { align, direction, indentation } = block.format;
     if (align !== undefined) {
         div.style.textAlign =
             align == Alignment.Right ? 'right' : align == Alignment.Center ? 'center' : 'left';
     }
     if (direction != undefined) {
         div.style.direction = direction == Direction.RightToLeft ? 'rtl' : 'ltr';
+    }
+    if (indentation != undefined) {
+        div.style.textIndent = indentation;
     }
 
     block.segments.forEach(segment => createSegmentFromContent(div, segment));
