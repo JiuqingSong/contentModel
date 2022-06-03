@@ -4,7 +4,7 @@ export const enum ContentModel_SegmentType {
     Entity,
 }
 
-export interface ContentMode_SegmentFormat {
+export interface ContentModel_SegmentFormat {
     bold?: boolean;
     italic?: boolean;
     underline?: boolean;
@@ -23,8 +23,9 @@ export interface ContentMode_SegmentFormat {
 
 export interface ContentModel_SegmentBase<T extends ContentModel_SegmentType> {
     type: T;
-    format: ContentMode_SegmentFormat;
-    isSelected?: boolean;
+    format: ContentModel_SegmentFormat;
+    isSelected: boolean;
+    alwaysKeep?: boolean;
 }
 
 export interface ContentModel_Text extends ContentModel_SegmentBase<ContentModel_SegmentType.Text> {
@@ -35,6 +36,7 @@ export interface ContentModel_Image
     extends ContentModel_SegmentBase<ContentModel_SegmentType.Image> {
     src: string;
     alterText?: string;
+    alwaysKeep: true;
 }
 
 export interface ContentModel_Entity

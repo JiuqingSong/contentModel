@@ -1,6 +1,6 @@
-import createContentModel from './createContentModel';
-import createFragment from './createFragment';
-import { ContentModel, Segment, SelectionType } from './ContentModel';
+import createContentModel from './contentModel/createContentModel';
+import createFragment from './contentModel/createFragment';
+import { ContentModel_Document } from './contentModel/Block';
 
 const sourceEl = document.getElementById('source') as HTMLTextAreaElement;
 const layoutEl = document.getElementById('layout') as HTMLDivElement;
@@ -32,7 +32,7 @@ function calc() {
     return model;
 }
 
-function render(model: ContentModel, updateSource?: boolean) {
+function render(model: ContentModel_Document, updateSource?: boolean) {
     const modelFragment = createFragment(model, document);
     while (modelLayoutEl.firstChild) {
         modelLayoutEl.removeChild(modelLayoutEl.firstChild);
@@ -46,64 +46,64 @@ function render(model: ContentModel, updateSource?: boolean) {
     }
 }
 
-function getSelectedSegments(model: ContentModel) {
-    const selectedSegments: Segment[] = [];
-    let isInSelection = false;
+//function getSelectedSegments(model: ContentModel_Document) {
+//    const selectedSegments: Segment[] = [];
+// let isInSelection = false;
 
-    for (let i = 0; i < model.blocks.length; i++) {
-        const block = model.blocks[i];
+// for (let i = 0; i < model.blocks.length; i++) {
+//     const block = model.blocks[i];
 
-        for (let j = 0; j < block.segments.length; j++) {
-            const seg = block.segments[j];
+//     for (let j = 0; j < block.segments.length; j++) {
+//         const seg = block.segments[j];
 
-            if (seg.selection === SelectionType.Start) {
-                isInSelection = true;
-            } else if (seg.selection === SelectionType.End) {
-                isInSelection = false;
-            } else if (isInSelection) {
-                selectedSegments.push(seg);
-            }
-        }
-    }
+//         if (seg.selection === SelectionType.Start) {
+//             isInSelection = true;
+//         } else if (seg.selection === SelectionType.End) {
+//             isInSelection = false;
+//         } else if (isInSelection) {
+//             selectedSegments.push(seg);
+//         }
+//     }
+// }
 
-    return selectedSegments;
-}
+//  return selectedSegments;
+// }
 
-function bold() {
-    const model = calc();
-    const selectedSegments = getSelectedSegments(model);
-    const turnOff = selectedSegments.every(seg => seg.format.bold);
+// function bold() {
+//     const model = calc();
+//     const selectedSegments = getSelectedSegments(model);
+//     const turnOff = selectedSegments.every(seg => seg.format.bold);
 
-    selectedSegments.forEach(seg => (seg.format.bold = !turnOff));
+//     selectedSegments.forEach(seg => (seg.format.bold = !turnOff));
 
-    render(model, true);
-}
+//     render(model, true);
+// }
 
-function italic() {
-    const model = calc();
-    const selectedSegments = getSelectedSegments(model);
-    const turnOff = selectedSegments.every(seg => seg.format.italic);
+// function italic() {
+//     const model = calc();
+//     const selectedSegments = getSelectedSegments(model);
+//     const turnOff = selectedSegments.every(seg => seg.format.italic);
 
-    selectedSegments.forEach(seg => (seg.format.italic = !turnOff));
+//     selectedSegments.forEach(seg => (seg.format.italic = !turnOff));
 
-    render(model, true);
-}
+//     render(model, true);
+// }
 
-function underline() {
-    const model = calc();
-    const selectedSegments = getSelectedSegments(model);
-    const turnOff = selectedSegments.every(seg => seg.format.underline);
+// function underline() {
+//     const model = calc();
+//     const selectedSegments = getSelectedSegments(model);
+//     const turnOff = selectedSegments.every(seg => seg.format.underline);
 
-    selectedSegments.forEach(seg => (seg.format.underline = !turnOff));
+//     selectedSegments.forEach(seg => (seg.format.underline = !turnOff));
 
-    render(model, true);
-}
+//     render(model, true);
+// }
 
 sourceEl.addEventListener('input', updateLayout);
 document.addEventListener('selectionchange', calc);
 
-btnBold.addEventListener('click', bold);
-btnItalic.addEventListener('click', italic);
-btnUnderline.addEventListener('click', underline);
+// btnBold.addEventListener('click', bold);
+// btnItalic.addEventListener('click', italic);
+// btnUnderline.addEventListener('click', underline);
 
 updateLayout();
