@@ -1,9 +1,6 @@
-import createContentModel, {
-    ContentModel,
-    createFragment,
-    Segment,
-    SelectionType,
-} from './contentModel';
+import createContentModel from './createContentModel';
+import createFragment from './createFragment';
+import { ContentModel, Segment, SelectionType } from './ContentMode';
 
 const sourceEl = document.getElementById('source') as HTMLTextAreaElement;
 const layoutEl = document.getElementById('layout') as HTMLDivElement;
