@@ -1,6 +1,6 @@
 import wrap from './roosterjs/wrap';
 import { Alignment } from './roosterjs/Alignment';
-import { Block, ContentModel, Segment, SegmentFormat, VerticalAlign } from './ContentMode';
+import { Block, ContentModel, Segment, SegmentFormat, VerticalAlign } from './ContentModel';
 import { Direction } from './roosterjs/Direction';
 
 export default function createFragment(

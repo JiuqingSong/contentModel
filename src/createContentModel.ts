@@ -10,7 +10,7 @@ import {
     SegmentFormat,
     SelectionType,
     VerticalAlign,
-} from './ContentMode';
+} from './ContentModel';
 
 export default function createContentModel(input: Node | string): ContentModel {
     const root =
