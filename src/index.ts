@@ -1,3 +1,4 @@
+import addRangeToSelection from './roosterjs/addRangeToSelection';
 import createContentModel from './contentModel/createContentModel';
 import createFragment from './contentModel/createFragment';
 import { ContentModel_Document } from './contentModel/Block';
@@ -33,12 +34,14 @@ function calc() {
 }
 
 function render(model: ContentModel_Document, updateSource?: boolean) {
-    const modelFragment = createFragment(model, document);
     while (modelLayoutEl.firstChild) {
         modelLayoutEl.removeChild(modelLayoutEl.firstChild);
     }
 
-    modelLayoutEl.appendChild(modelFragment);
+    const [fragement, range] = createFragment(model, document);
+    modelLayoutEl.appendChild(fragement);
+    addRangeToSelection(range);
+
     modelHtmlEl.value = modelLayoutEl.innerHTML;
 
     if (updateSource) {
@@ -102,7 +105,9 @@ function render(model: ContentModel_Document, updateSource?: boolean) {
 sourceEl.addEventListener('input', updateLayout);
 document.addEventListener('selectionchange', calc);
 
-// btnBold.addEventListener('click', bold);
+btnBold.addEventListener('click', () => {
+    render(calc());
+});
 // btnItalic.addEventListener('click', italic);
 // btnUnderline.addEventListener('click', underline);
 

@@ -6,16 +6,54 @@ import {
     ContentModel_SegmentType,
 } from './Segment';
 
+interface SelectionContext {
+    isInSelection: boolean;
+    previousSelectionAnchor: HTMLElement | null;
+    startContainer?: Node;
+    endContainer?: Node;
+    startOffset?: number;
+    endOffset?: number;
+}
+
 export default function createFragment(
     model: ContentModel_Document,
     doc: Document
-): DocumentFragment {
+): [DocumentFragment, Range] {
     const fragment = doc.createDocumentFragment();
-    model.blocks.forEach(block => createBlockFromContentModel(fragment, block));
-    return fragment;
+    const context: SelectionContext = {
+        isInSelection: false,
+        previousSelectionAnchor: null,
+    };
+    model.blocks.forEach(block => createBlockFromContentModel(fragment, block, context));
+
+    if (context.startContainer && !context.endContainer) {
+        if (context.previousSelectionAnchor) {
+            context.endContainer = context.previousSelectionAnchor;
+            context.endOffset = context.endContainer.textContent.length;
+        } else {
+            context.startContainer = undefined;
+            context.startOffset = undefined;
+        }
+
+        context.previousSelectionAnchor = null;
+    }
+
+    let range: Range = null;
+
+    if (context.startContainer && context.endContainer) {
+        range = document.createRange();
+        range.setStart(context.startContainer, context.startOffset);
+        range.setEnd(context.endContainer, context.endOffset);
+    }
+
+    return [fragment, range];
 }
 
-function createBlockFromContentModel(parent: Node, block: ContentModel_Block) {
+function createBlockFromContentModel(
+    parent: Node,
+    block: ContentModel_Block,
+    context: SelectionContext
+) {
     const doc = parent.ownerDocument;
 
     switch (block.blockType) {
@@ -23,7 +61,7 @@ function createBlockFromContentModel(parent: Node, block: ContentModel_Block) {
             const div = doc.createElement('div');
             parent.appendChild(div);
 
-            const { alignment, direction, indentation } = block.format;
+            const { alignment, direction, indentation, marginBottom, marginTop } = block.format;
             if (alignment !== undefined) {
                 div.style.textAlign = alignment;
             }
@@ -33,12 +71,31 @@ function createBlockFromContentModel(parent: Node, block: ContentModel_Block) {
             if (indentation != undefined) {
                 div.style.textIndent = indentation;
             }
+            if (marginTop) {
+                div.style.marginTop = marginTop;
+            }
+            if (marginBottom) {
+                div.style.marginBottom = marginBottom;
+            }
 
             let previousSegment: ContentModel_Segment | null = null;
-            let previousSpan: HTMLSpanElement | null = null;
+            let previousSpan: HTMLElement | null = null;
+
             block.segments.forEach(segment => {
-                // if (segment.selection === undefined) {
-                previousSpan = createSegmentFromContent(
+                let pendingStartContainer = false;
+                let pendingEndOffset = false;
+
+                if (segment.isSelected && !context.isInSelection) {
+                    context.isInSelection = true;
+                    context.startOffset = previousSpan?.textContent.length || 0;
+                    pendingStartContainer = true;
+                } else if (!segment.isSelected && context.isInSelection) {
+                    context.isInSelection = false;
+                    context.endContainer = context.previousSelectionAnchor;
+                    pendingEndOffset = true;
+                }
+
+                const newSpan = createSegmentFromContent(
                     div,
                     segment,
                     previousSegment,
@@ -46,9 +103,20 @@ function createBlockFromContentModel(parent: Node, block: ContentModel_Block) {
                 );
 
                 previousSegment = segment;
-                // } else {
-                //     // Handle selection
-                // }
+
+                if (pendingStartContainer) {
+                    context.startContainer = newSpan;
+                }
+
+                if (pendingEndOffset) {
+                    context.endOffset = newSpan.textContent.length;
+                }
+
+                if (context.isInSelection) {
+                    context.previousSelectionAnchor = newSpan;
+                }
+
+                previousSpan = newSpan;
             });
 
             if (!div.textContent) {

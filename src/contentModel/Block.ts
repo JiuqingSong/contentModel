@@ -22,6 +22,8 @@ export interface ContentModel_ParagraphFormat {
     alignment?: 'left' | 'center' | 'right';
     indentation?: string;
     shadeColor?: string;
+    marginTop?: string;
+    marginBottom?: string;
 }
 
 export interface ContentModel_BlockBase<T extends ContentModel_BlockType> {

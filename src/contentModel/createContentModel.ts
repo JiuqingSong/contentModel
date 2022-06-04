@@ -159,6 +159,8 @@ function processNode(
         }
 
         if (endOffset >= 0) {
+            addTextSegment(paragraph, context);
+
             processText(paragraph, txt.substring(0, endOffset), context);
             context.isInSelection = false;
 
@@ -295,6 +297,8 @@ function processChildren(
         }
 
         if (index == endOffset) {
+            const seg = addTextSegment(paragraph, context);
+            seg.alwaysKeep = true;
             context.isInSelection = false;
             addTextSegment(paragraph, context);
         }
@@ -398,6 +402,7 @@ function getSegmentFormat(node: HTMLElement, context: FormatContext) {
 }
 
 function getBlockFormat(node: HTMLElement, context: FormatContext) {
+    const tag = getTagOfNode(node);
     const result = {
         ...context.blockFormat,
     };
@@ -410,6 +415,24 @@ function getBlockFormat(node: HTMLElement, context: FormatContext) {
     const align = node.style.textAlign;
     if (align) {
         result.alignment = align == 'right' ? 'right' : align == 'center' ? 'center' : 'right';
+    }
+
+    let marginTop = node.style.marginTop;
+    let marginBottom = node.style.marginBottom;
+
+    if (tag == 'P') {
+        if (!marginTop) {
+            marginTop = '1em';
+        }
+        if (!marginBottom) {
+            marginBottom = '1em';
+        }
+    }
+    if (marginTop) {
+        result.marginTop = marginTop;
+    }
+    if (marginBottom) {
+        result.marginBottom = marginBottom;
     }
 
     const indentation = node.style.textIndent;
