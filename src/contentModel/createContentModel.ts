@@ -1,5 +1,4 @@
-import getTagOfNode from '../roosterjs/getTagOfNode';
-import safeInstanceOf from '../roosterjs/safeInstanceOf';
+import { getTagOfNode, safeInstanceOf } from 'roosterjs-editor-dom';
 import {
     ContentModel_Segment,
     ContentModel_SegmentFormat,
@@ -22,7 +21,10 @@ interface FormatContext {
     isInSelection: boolean;
 }
 
-export default function createContentModel(input: Node | string): ContentModel_Document {
+export default function createContentModel(
+    input: Node | string,
+    range: Range
+): ContentModel_Document {
     const root =
         typeof input == 'string' ? new DOMParser().parseFromString(input, 'text/html').body : input;
     const contentModel: ContentModel_Document = {
@@ -35,12 +37,6 @@ export default function createContentModel(input: Node | string): ContentModel_D
         segmentFormat: {},
         isInSelection: false,
     };
-    let range: Range;
-
-    try {
-        range = document.getSelection().getRangeAt(0);
-    } catch {}
-    range = range || document.createRange();
 
     addParagraph(contentModel, formatContext);
     processNode(contentModel, root, formatContext, range);
@@ -144,8 +140,8 @@ function processNode(
         const paragraph = getOrAddParagraph(group, context);
 
         let txt = node.nodeValue;
-        let startOffset = range.startContainer == node ? range.startOffset : -1;
-        let endOffset = range.endContainer == node ? range.endOffset : -1;
+        let startOffset = range && range.startContainer == node ? range.startOffset : -1;
+        let endOffset = range && range.endContainer == node ? range.endOffset : -1;
 
         if (startOffset >= 0) {
             processText(paragraph, txt.substring(0, startOffset), context);
@@ -284,8 +280,8 @@ function processChildren(
     context: FormatContext,
     range: Range
 ) {
-    const startOffset = range.startContainer == parent ? range.startOffset : -1;
-    const endOffset = range.endContainer == parent ? range.endOffset : -1;
+    const startOffset = range && range.startContainer == parent ? range.startOffset : -1;
+    const endOffset = range && range.endContainer == parent ? range.endOffset : -1;
     const paragraph = getOrAddParagraph(group, context);
     let index = 0;
 

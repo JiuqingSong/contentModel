@@ -1,12 +1,12 @@
-import wrap from '../roosterjs/wrap';
 import { ContentModel_Block, ContentModel_BlockType, ContentModel_Document } from './Block';
+import { wrap } from 'roosterjs-editor-dom';
 import {
     ContentModel_Segment,
     ContentModel_SegmentFormat,
     ContentModel_SegmentType,
 } from './Segment';
 
-interface SelectionContext {
+export interface SelectionContext {
     isInSelection: boolean;
     previousSelectionAnchor: HTMLElement | null;
     startContainer?: Node;
@@ -18,7 +18,7 @@ interface SelectionContext {
 export default function createFragment(
     model: ContentModel_Document,
     doc: Document
-): [DocumentFragment, Range] {
+): [DocumentFragment, SelectionContext] {
     const fragment = doc.createDocumentFragment();
     const context: SelectionContext = {
         isInSelection: false,
@@ -38,15 +38,7 @@ export default function createFragment(
         context.previousSelectionAnchor = null;
     }
 
-    let range: Range = null;
-
-    if (context.startContainer && context.endContainer) {
-        range = document.createRange();
-        range.setStart(context.startContainer, context.startOffset);
-        range.setEnd(context.endContainer, context.endOffset);
-    }
-
-    return [fragment, range];
+    return [fragment, context];
 }
 
 function createBlockFromContentModel(
@@ -83,16 +75,16 @@ function createBlockFromContentModel(
 
             block.segments.forEach(segment => {
                 let pendingStartContainer = false;
-                let pendingEndOffset = false;
 
                 if (segment.isSelected && !context.isInSelection) {
                     context.isInSelection = true;
                     context.startOffset = previousSpan?.textContent.length || 0;
+                    context.startContainer = previousSpan;
                     pendingStartContainer = true;
                 } else if (!segment.isSelected && context.isInSelection) {
                     context.isInSelection = false;
                     context.endContainer = context.previousSelectionAnchor;
-                    pendingEndOffset = true;
+                    context.endOffset = context.previousSelectionAnchor?.textContent.length || 0;
                 }
 
                 const newSpan = createSegmentFromContent(
@@ -105,11 +97,11 @@ function createBlockFromContentModel(
                 previousSegment = segment;
 
                 if (pendingStartContainer) {
-                    context.startContainer = newSpan;
-                }
+                    if (context.startContainer != newSpan) {
+                        context.startOffset = 0;
+                    }
 
-                if (pendingEndOffset) {
-                    context.endOffset = newSpan.textContent.length;
+                    context.startContainer = newSpan;
                 }
 
                 if (context.isInSelection) {
