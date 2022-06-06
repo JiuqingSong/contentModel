@@ -12,10 +12,12 @@ const modelHtmlEl = document.getElementById('modelHTML') as HTMLTextAreaElement;
 const modelLayoutEl = document.getElementById('modelLayout') as HTMLDivElement;
 const editor: IEditor = new Editor(modelLayoutEl);
 
-const btnUpdate = document.getElementById('btnUpdate') as HTMLButtonElement;
 const btnBold = document.getElementById('btnBold') as HTMLButtonElement;
 const btnItalic = document.getElementById('btnItalic') as HTMLButtonElement;
 const btnUnderline = document.getElementById('btnUnderline') as HTMLButtonElement;
+
+sourceEl.textContent =
+    'before<table><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></table>after';
 
 sourceEl.addEventListener('input', updateLayout);
 btnBold.addEventListener('click', bold);
@@ -50,7 +52,7 @@ function updateResult(model: ContentModel_Document, updateSelection: boolean) {
         modelLayoutEl.removeChild(modelLayoutEl.firstChild);
     }
 
-    const [fragement, context] = createFragment(model, document);
+    const [fragement, context] = createFragment(document, model);
     modelLayoutEl.appendChild(fragement);
     modelHtmlEl.value = modelLayoutEl.innerHTML;
 

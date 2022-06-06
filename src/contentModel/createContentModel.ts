@@ -1,4 +1,4 @@
-import { getTagOfNode, safeInstanceOf } from 'roosterjs-editor-dom';
+import { getTagOfNode, safeInstanceOf, toArray } from 'roosterjs-editor-dom';
 import {
     ContentModel_Segment,
     ContentModel_SegmentFormat,
@@ -13,12 +13,15 @@ import {
     ContentModel_BlockGroup,
     ContentModel_Block,
     ContentModel_Paragraph,
+    ContentModel_Table,
+    ContentModel_TableCell,
 } from './Block';
 
 interface FormatContext {
     blockFormat: ContentModel_ParagraphFormat;
     segmentFormat: ContentModel_SegmentFormat;
     isInSelection: boolean;
+    range: Range | null;
 }
 
 export default function createContentModel(
@@ -36,10 +39,11 @@ export default function createContentModel(
         blockFormat: {},
         segmentFormat: {},
         isInSelection: false,
+        range,
     };
 
     addParagraph(contentModel, formatContext);
-    processNode(contentModel, root, formatContext, range);
+    processNode(contentModel, root, formatContext);
     normalizeModel(contentModel);
 
     return contentModel;
@@ -75,12 +79,7 @@ function isEmptyBlock(block: ContentModel_Block) {
     return block.blockType == ContentModel_BlockType.Paragraph && block.segments.length == 0;
 }
 
-function processNode(
-    group: ContentModel_BlockGroup,
-    node: Node,
-    context: FormatContext,
-    range: Range
-) {
+function processNode(group: ContentModel_BlockGroup, node: Node, context: FormatContext) {
     if (safeInstanceOf(node, 'HTMLElement')) {
         switch (getTagOfNode(node)) {
             case 'DIV':
@@ -90,7 +89,7 @@ function processNode(
             case 'OL':
             case 'UL':
             case 'LI':
-                processElement(group, node, 'block', context, range);
+                processElement(group, node, 'block', context);
                 break;
 
             case 'BR':
@@ -108,18 +107,21 @@ function processNode(
             case 'SUP':
             case 'S':
             case 'STRIKE':
-                processElement(group, node, 'inline', context, range);
+                processElement(group, node, 'inline', context);
                 break;
 
             case 'BODY':
-                processChildren(group, node, context, range);
+                processChildren(group, node, context);
+                break;
+
+            case 'TABLE':
+                processTable(group, node as HTMLTableElement, context);
                 break;
 
             case 'TD':
             case 'FONT':
             case 'TR':
             case 'TBODY':
-            case 'TABLE':
             case 'IMG':
             case 'PRE':
             case 'H1':
@@ -140,8 +142,10 @@ function processNode(
         const paragraph = getOrAddParagraph(group, context);
 
         let txt = node.nodeValue;
-        let startOffset = range && range.startContainer == node ? range.startOffset : -1;
-        let endOffset = range && range.endContainer == node ? range.endOffset : -1;
+        let startOffset =
+            context.range && context.range.startContainer == node ? context.range.startOffset : -1;
+        let endOffset =
+            context.range && context.range.endContainer == node ? context.range.endOffset : -1;
 
         if (startOffset >= 0) {
             processText(paragraph, txt.substring(0, startOffset), context);
@@ -166,6 +170,50 @@ function processNode(
 
         processText(paragraph, txt, context);
     } else {
+    }
+}
+
+function processTable(
+    group: ContentModel_BlockGroup,
+    node: HTMLTableElement,
+    context: FormatContext
+) {
+    const table: ContentModel_Table = {
+        blockType: ContentModel_BlockType.Table,
+        cells: toArray(node.rows).map(_ => []),
+    };
+
+    group.blocks.push(table);
+
+    for (let row = 0; row < node.rows.length; row++) {
+        const tr = node.rows[row];
+        for (let sourceCol = 0, targetCol = 0; sourceCol < tr.cells.length; sourceCol++) {
+            for (; table.cells[row][targetCol]; targetCol++) {}
+
+            const td = tr.cells[sourceCol];
+
+            for (let colSpan = 0; colSpan < td.colSpan; colSpan++, targetCol++) {
+                for (let rowSpan = 0; rowSpan < td.rowSpan; rowSpan++) {
+                    const hasTd = colSpan + rowSpan == 0;
+                    const cell: ContentModel_TableCell = {
+                        blockGroupType: ContentModel_BlockGroupType.TableCell,
+                        blockType: ContentModel_BlockType.BlockGroup,
+                        blocks: [],
+                        // td: hasTd ? td : null,
+                        spanLeft: colSpan > 0,
+                        spanAbove: rowSpan > 0,
+                    };
+
+                    addParagraph(cell, context);
+
+                    table.cells[row + rowSpan][targetCol] = cell;
+
+                    if (hasTd) {
+                        processChildren(cell, td, context);
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -196,8 +244,7 @@ function processElement(
     group: ContentModel_BlockGroup,
     node: HTMLElement,
     displayDefault: string,
-    context: FormatContext,
-    range: Range
+    context: FormatContext
 ) {
     const display = node.style.display || displayDefault;
 
@@ -209,12 +256,12 @@ function processElement(
         case 'inline-grid':
         case 'inline-table':
         case 'contents':
-            processSegment(group, node, context, range);
+            processSegment(group, node, context);
             break;
         case 'block':
         case 'flex':
         case 'grid':
-            processBlock(group, node, context, range);
+            processBlock(group, node, context);
             break;
 
         case 'list-item':
@@ -240,35 +287,25 @@ function processElement(
     }
 }
 
-function processSegment(
-    group: ContentModel_BlockGroup,
-    node: HTMLElement,
-    context: FormatContext,
-    range: Range
-) {
+function processSegment(group: ContentModel_BlockGroup, node: HTMLElement, context: FormatContext) {
     const paragraph = getOrAddParagraph(group, context);
     const originalSegmentFormat = context.segmentFormat;
 
     context.segmentFormat = getSegmentFormat(node, context);
 
     addTextSegment(paragraph, context);
-    processChildren(group, node, context, range);
+    processChildren(group, node, context);
 
     context.segmentFormat = originalSegmentFormat;
     addTextSegment(paragraph, context);
 }
 
-function processBlock(
-    group: ContentModel_BlockGroup,
-    node: HTMLElement,
-    context: FormatContext,
-    range: Range
-) {
+function processBlock(group: ContentModel_BlockGroup, node: HTMLElement, context: FormatContext) {
     const originalBlockFormat = context.blockFormat;
 
     context.blockFormat = getBlockFormat(node, context);
     addParagraph(group, context);
-    processChildren(group, node, context, range);
+    processChildren(group, node, context);
     context.blockFormat = originalBlockFormat;
 
     addParagraph(group, context);
@@ -277,11 +314,12 @@ function processBlock(
 function processChildren(
     group: ContentModel_BlockGroup,
     parent: HTMLElement,
-    context: FormatContext,
-    range: Range
+    context: FormatContext
 ) {
-    const startOffset = range && range.startContainer == parent ? range.startOffset : -1;
-    const endOffset = range && range.endContainer == parent ? range.endOffset : -1;
+    const startOffset =
+        context.range && context.range.startContainer == parent ? context.range.startOffset : -1;
+    const endOffset =
+        context.range && context.range.endContainer == parent ? context.range.endOffset : -1;
     const paragraph = getOrAddParagraph(group, context);
     let index = 0;
 
@@ -298,7 +336,7 @@ function processChildren(
             context.isInSelection = false;
             addTextSegment(paragraph, context);
         }
-        processNode(group, child, context, range);
+        processNode(group, child, context);
         index++;
     }
 }

@@ -1,5 +1,11 @@
-import { ContentModel_Block, ContentModel_BlockType, ContentModel_Document } from './Block';
 import { wrap } from 'roosterjs-editor-dom';
+import {
+    ContentModel_Block,
+    ContentModel_BlockType,
+    ContentModel_Document,
+    ContentModel_Paragraph,
+    ContentModel_Table,
+} from './Block';
 import {
     ContentModel_Segment,
     ContentModel_SegmentFormat,
@@ -16,15 +22,16 @@ export interface SelectionContext {
 }
 
 export default function createFragment(
-    model: ContentModel_Document,
-    doc: Document
+    doc: Document,
+    model: ContentModel_Document
 ): [DocumentFragment, SelectionContext] {
     const fragment = doc.createDocumentFragment();
     const context: SelectionContext = {
         isInSelection: false,
         previousSelectionAnchor: null,
     };
-    model.blocks.forEach(block => createBlockFromContentModel(fragment, block, context));
+
+    createBlockFromContentModel(doc, fragment, model, context);
 
     if (context.startContainer && !context.endContainer) {
         if (context.previousSelectionAnchor) {
@@ -42,78 +49,133 @@ export default function createFragment(
 }
 
 function createBlockFromContentModel(
+    doc: Document,
     parent: Node,
     block: ContentModel_Block,
     context: SelectionContext
 ) {
-    const doc = parent.ownerDocument;
-
     switch (block.blockType) {
+        case ContentModel_BlockType.List:
+            break;
+
+        case ContentModel_BlockType.Table:
+            createTable(doc, parent, block, context);
+            break;
+
+        case ContentModel_BlockType.BlockGroup:
+            block.blocks.forEach(block => createBlockFromContentModel(doc, parent, block, context));
+
+            break;
         case ContentModel_BlockType.Paragraph:
-            const div = doc.createElement('div');
-            parent.appendChild(div);
+            createParagraph(doc, parent, block, context);
+            break;
+    }
+}
 
-            const { alignment, direction, indentation, marginBottom, marginTop } = block.format;
-            if (alignment !== undefined) {
-                div.style.textAlign = alignment;
-            }
-            if (direction != undefined) {
-                div.style.direction = direction;
-            }
-            if (indentation != undefined) {
-                div.style.textIndent = indentation;
-            }
-            if (marginTop) {
-                div.style.marginTop = marginTop;
-            }
-            if (marginBottom) {
-                div.style.marginBottom = marginBottom;
+function createParagraph(
+    doc: Document,
+    parent: Node,
+    paragraph: ContentModel_Paragraph,
+    context: SelectionContext
+) {
+    const div = doc.createElement('div');
+    parent.appendChild(div);
+
+    const { alignment, direction, indentation, marginBottom, marginTop } = paragraph.format;
+    if (alignment !== undefined) {
+        div.style.textAlign = alignment;
+    }
+    if (direction != undefined) {
+        div.style.direction = direction;
+    }
+    if (indentation != undefined) {
+        div.style.textIndent = indentation;
+    }
+    if (marginTop) {
+        div.style.marginTop = marginTop;
+    }
+    if (marginBottom) {
+        div.style.marginBottom = marginBottom;
+    }
+
+    let previousSegment: ContentModel_Segment | null = null;
+    let previousSpan: HTMLElement | null = null;
+
+    paragraph.segments.forEach(segment => {
+        let pendingStartContainer = false;
+
+        if (segment.isSelected && !context.isInSelection) {
+            context.isInSelection = true;
+            context.startOffset = previousSpan?.textContent.length || 0;
+            context.startContainer = previousSpan;
+            pendingStartContainer = true;
+        } else if (!segment.isSelected && context.isInSelection) {
+            context.isInSelection = false;
+            context.endContainer = context.previousSelectionAnchor;
+            context.endOffset = context.previousSelectionAnchor?.textContent.length || 0;
+        }
+
+        const newSpan = createSegmentFromContent(doc, div, segment, previousSegment, previousSpan);
+
+        previousSegment = segment;
+
+        if (pendingStartContainer) {
+            if (context.startContainer != newSpan) {
+                context.startOffset = 0;
             }
 
-            let previousSegment: ContentModel_Segment | null = null;
-            let previousSpan: HTMLElement | null = null;
+            context.startContainer = newSpan;
+        }
 
-            block.segments.forEach(segment => {
-                let pendingStartContainer = false;
+        if (context.isInSelection) {
+            context.previousSelectionAnchor = newSpan;
+        }
 
-                if (segment.isSelected && !context.isInSelection) {
-                    context.isInSelection = true;
-                    context.startOffset = previousSpan?.textContent.length || 0;
-                    context.startContainer = previousSpan;
-                    pendingStartContainer = true;
-                } else if (!segment.isSelected && context.isInSelection) {
-                    context.isInSelection = false;
-                    context.endContainer = context.previousSelectionAnchor;
-                    context.endOffset = context.previousSelectionAnchor?.textContent.length || 0;
+        previousSpan = newSpan;
+    });
+
+    if (!div.textContent) {
+        div.appendChild(doc.createElement('br'));
+    }
+}
+
+function createTable(
+    doc: Document,
+    parent: Node,
+    table: ContentModel_Table,
+    context: SelectionContext
+) {
+    const tableNode = doc.createElement('table');
+    parent.appendChild(tableNode);
+
+    for (let row = 0; row < table.cells.length; row++) {
+        const tr = doc.createElement('tr');
+        tableNode.appendChild(tr);
+
+        for (let col = 0; col < table.cells[row].length; col++) {
+            const cell = table.cells[row][col];
+
+            if (!cell.spanAbove && !cell.spanLeft) {
+                const td = doc.createElement('td');
+                tr.appendChild(td);
+
+                let rowSpan = 1;
+                let colSpan = 1;
+
+                for (; table.cells[row + rowSpan]?.[col]?.spanAbove; rowSpan++) {}
+                for (; table.cells[row][col + colSpan]?.spanLeft; colSpan++) {}
+
+                if (rowSpan > 1) {
+                    td.rowSpan = rowSpan;
                 }
 
-                const newSpan = createSegmentFromContent(
-                    div,
-                    segment,
-                    previousSegment,
-                    previousSpan
-                );
-
-                previousSegment = segment;
-
-                if (pendingStartContainer) {
-                    if (context.startContainer != newSpan) {
-                        context.startOffset = 0;
-                    }
-
-                    context.startContainer = newSpan;
+                if (colSpan > 1) {
+                    td.colSpan = colSpan;
                 }
 
-                if (context.isInSelection) {
-                    context.previousSelectionAnchor = newSpan;
-                }
-
-                previousSpan = newSpan;
-            });
-
-            if (!div.textContent) {
-                div.appendChild(doc.createElement('br'));
+                createBlockFromContentModel(doc, td, cell, context);
             }
+        }
     }
 }
 
@@ -133,6 +195,7 @@ function areSameFormats(f1: ContentModel_SegmentFormat, f2: ContentModel_Segment
 }
 
 function createSegmentFromContent(
+    doc: Document,
     parent: Node,
     segment: ContentModel_Segment,
     previousSegment: ContentModel_Segment | null,
@@ -148,7 +211,6 @@ function createSegmentFromContent(
                 previousSpan.textContent += segment.text;
                 return previousSpan;
             } else {
-                const doc = parent.ownerDocument;
                 const span = doc.createElement('span');
 
                 parent.appendChild(span);

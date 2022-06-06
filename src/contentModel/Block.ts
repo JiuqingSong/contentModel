@@ -71,8 +71,8 @@ export interface ContentModel_ListItem
 
 export interface ContentModel_TableCell
     extends ContentModel_BlockGroupBase<ContentModel_BlockGroupType.TableCell> {
-    spanLeft?: boolean;
-    spanTop?: boolean;
+    spanLeft: boolean;
+    spanAbove: boolean;
 }
 
 export interface ContentModel_Entity
