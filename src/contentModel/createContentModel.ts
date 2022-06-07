@@ -43,26 +43,43 @@ export default function createContentModel(
     };
 
     addParagraph(contentModel, formatContext);
-    processNode(contentModel, root, formatContext);
+    processChildren(contentModel, root, formatContext);
     normalizeModel(contentModel);
 
     return contentModel;
 }
 
-function normalizeModel(model: ContentModel_BlockGroup) {
-    for (let i = model.blocks.length - 1; i >= 0; i--) {
-        const block = model.blocks[i];
+function normalizeModel(group: ContentModel_BlockGroup) {
+    for (let i = group.blocks.length - 1; i >= 0; i--) {
+        const block = group.blocks[i];
 
-        if (block.blockType == ContentModel_BlockType.Paragraph) {
-            for (let j = block.segments.length - 1; j >= 0; j--) {
-                if (isEmptySegment(block.segments[j])) {
-                    block.segments.splice(j, 1);
+        switch (block.blockType) {
+            case ContentModel_BlockType.BlockGroup:
+                normalizeModel(block);
+                break;
+            case ContentModel_BlockType.List:
+                for (let j = 0; j < block.listItems.length; j++) {
+                    normalizeModel(block.listItems[j]);
                 }
-            }
+                break;
+            case ContentModel_BlockType.Paragraph:
+                for (let j = block.segments.length - 1; j >= 0; j--) {
+                    if (isEmptySegment(block.segments[j])) {
+                        block.segments.splice(j, 1);
+                    }
+                }
+                break;
+            case ContentModel_BlockType.Table:
+                for (let r = 0; r < block.cells.length; r++) {
+                    for (let c = 0; c < block.cells[r].length; c++) {
+                        normalizeModel(block.cells[r][c]);
+                    }
+                }
+                break;
         }
 
         if (isEmptyBlock(block)) {
-            model.blocks.splice(i, 1);
+            group.blocks.splice(i, 1);
         }
     }
 }
@@ -311,11 +328,7 @@ function processBlock(group: ContentModel_BlockGroup, node: HTMLElement, context
     addParagraph(group, context);
 }
 
-function processChildren(
-    group: ContentModel_BlockGroup,
-    parent: HTMLElement,
-    context: FormatContext
-) {
+function processChildren(group: ContentModel_BlockGroup, parent: Node, context: FormatContext) {
     const startOffset =
         context.range && context.range.startContainer == parent ? context.range.startOffset : -1;
     const endOffset =

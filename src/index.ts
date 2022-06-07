@@ -16,8 +16,7 @@ const btnBold = document.getElementById('btnBold') as HTMLButtonElement;
 const btnItalic = document.getElementById('btnItalic') as HTMLButtonElement;
 const btnUnderline = document.getElementById('btnUnderline') as HTMLButtonElement;
 
-sourceEl.textContent =
-    'before<table><tr><td>1</td><td>2</td></tr><tr><td>3</td><td>4</td></tr></table>after';
+sourceEl.textContent = '<table><tr><td>1</td></tr></table>';
 
 sourceEl.addEventListener('input', updateLayout);
 btnBold.addEventListener('click', bold);
