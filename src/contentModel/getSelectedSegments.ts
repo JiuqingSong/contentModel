@@ -1,10 +1,10 @@
-import { ContentModel_Segment } from './Segment';
+import { ContentModel_Segment } from './types/Segment';
 import {
     ContentModel_BlockGroup,
     ContentModel_BlockType,
     ContentModel_Document,
     ContentModel_Paragraph,
-} from './Block';
+} from './types/Block';
 
 export default function getSelectedSegments(model: ContentModel_Document) {
     const segments: ContentModel_Segment[] = [];

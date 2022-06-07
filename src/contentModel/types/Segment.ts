@@ -25,7 +25,7 @@ export interface ContentModel_SegmentBase<T extends ContentModel_SegmentType> {
     type: T;
     format: ContentModel_SegmentFormat;
     isSelected: boolean;
-    alwaysKeep?: boolean;
+    // alwaysKeep?: boolean;
 }
 
 export interface ContentModel_Text extends ContentModel_SegmentBase<ContentModel_SegmentType.Text> {
@@ -36,7 +36,7 @@ export interface ContentModel_Image
     extends ContentModel_SegmentBase<ContentModel_SegmentType.Image> {
     src: string;
     alterText?: string;
-    alwaysKeep: true;
+    // alwaysKeep: true;
 }
 
 export interface ContentModel_Entity

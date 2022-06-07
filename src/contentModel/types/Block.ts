@@ -21,9 +21,11 @@ export interface ContentModel_ParagraphFormat {
     direction?: 'ltr' | 'rtl';
     alignment?: 'left' | 'center' | 'right';
     indentation?: string;
-    shadeColor?: string;
+    backgroundColor?: string;
     marginTop?: string;
     marginBottom?: string;
+    lineHeight?: string;
+    whiteSpace?: string;
 }
 
 export interface ContentModel_BlockBase<T extends ContentModel_BlockType> {

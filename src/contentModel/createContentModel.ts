@@ -1,10 +1,12 @@
+import getElementDefaultStyle from './getElementDefaultStyle';
 import { getTagOfNode, safeInstanceOf, toArray } from 'roosterjs-editor-dom';
+import { ParagraphFormatHandlers, SegmentFormatHandlers } from './formatHandlers';
 import {
     ContentModel_Segment,
     ContentModel_SegmentFormat,
     ContentModel_SegmentType,
     ContentModel_Text,
-} from './Segment';
+} from './types/Segment';
 import {
     ContentModel_BlockGroupType,
     ContentModel_ParagraphFormat,
@@ -15,7 +17,7 @@ import {
     ContentModel_Paragraph,
     ContentModel_Table,
     ContentModel_TableCell,
-} from './Block';
+} from './types/Block';
 
 interface FormatContext {
     blockFormat: ContentModel_ParagraphFormat;
@@ -87,8 +89,8 @@ function normalizeModel(group: ContentModel_BlockGroup) {
 function isEmptySegment(segment: ContentModel_Segment) {
     return (
         segment.type == ContentModel_SegmentType.Text &&
-        (!segment.text || /^[\r\n]*$/.test(segment.text)) &&
-        !segment.alwaysKeep
+        (!segment.text || /^[\r\n]*$/.test(segment.text))
+        // &&        !segment.alwaysKeep
     );
 }
 
@@ -136,7 +138,6 @@ function processNode(group: ContentModel_BlockGroup, node: Node, context: Format
                 break;
 
             case 'TD':
-            case 'FONT':
             case 'TR':
             case 'TBODY':
             case 'IMG':
@@ -169,7 +170,7 @@ function processNode(group: ContentModel_BlockGroup, node: Node, context: Format
             context.isInSelection = true;
 
             const seg = addTextSegment(paragraph, context);
-            seg.alwaysKeep = true;
+            // seg.alwaysKeep = true;
 
             txt = txt.substring(startOffset);
             endOffset -= startOffset;
@@ -251,7 +252,7 @@ function processBr(group: ContentModel_BlockGroup, context: FormatContext) {
     const seg = getOrAddTextSegment(p, context);
 
     if (isEmptySegment(seg)) {
-        seg.alwaysKeep = true;
+        // seg.alwaysKeep = true;
     }
 
     addParagraph(group, context);
@@ -259,11 +260,11 @@ function processBr(group: ContentModel_BlockGroup, context: FormatContext) {
 
 function processElement(
     group: ContentModel_BlockGroup,
-    node: HTMLElement,
+    element: HTMLElement,
     displayDefault: string,
     context: FormatContext
 ) {
-    const display = node.style.display || displayDefault;
+    const display = element.style.display || displayDefault;
 
     // https://www.w3schools.com/cssref/pr_class_display.asp
     switch (display) {
@@ -273,12 +274,12 @@ function processElement(
         case 'inline-grid':
         case 'inline-table':
         case 'contents':
-            processSegment(group, node, context);
+            processSegment(group, element, context);
             break;
         case 'block':
         case 'flex':
         case 'grid':
-            processBlock(group, node, context);
+            processBlock(group, element, context);
             break;
 
         case 'list-item':
@@ -304,27 +305,39 @@ function processElement(
     }
 }
 
-function processSegment(group: ContentModel_BlockGroup, node: HTMLElement, context: FormatContext) {
+function processSegment(
+    group: ContentModel_BlockGroup,
+    element: HTMLElement,
+    context: FormatContext
+) {
     let paragraph = getOrAddParagraph(group, context);
     const originalSegmentFormat = context.segmentFormat;
 
-    context.segmentFormat = getSegmentFormat(node, context);
+    context.segmentFormat = getSegmentFormat(element, context);
 
     addTextSegment(paragraph, context);
-    processChildren(group, node, context);
+    processChildren(group, element, context);
 
     paragraph = getOrAddParagraph(group, context);
     context.segmentFormat = originalSegmentFormat;
     addTextSegment(paragraph, context);
 }
 
-function processBlock(group: ContentModel_BlockGroup, node: HTMLElement, context: FormatContext) {
+function processBlock(
+    group: ContentModel_BlockGroup,
+    element: HTMLElement,
+    context: FormatContext
+) {
     const originalBlockFormat = context.blockFormat;
+    const originalSegmentFormat = context.segmentFormat;
 
-    context.blockFormat = getBlockFormat(node, context);
+    context.blockFormat = getBlockFormat(element, context);
+    context.segmentFormat = getSegmentFormat(element, context);
+
     addParagraph(group, context);
-    processChildren(group, node, context);
+    processChildren(group, element, context);
     context.blockFormat = originalBlockFormat;
+    context.segmentFormat = originalSegmentFormat;
 
     addParagraph(group, context);
 }
@@ -341,12 +354,12 @@ function processChildren(group: ContentModel_BlockGroup, parent: Node, context: 
         if (index == startOffset) {
             context.isInSelection = true;
             const seg = addTextSegment(paragraph, context);
-            seg.alwaysKeep = true;
+            // seg.alwaysKeep = true;
         }
 
         if (index == endOffset) {
             const seg = addTextSegment(paragraph, context);
-            seg.alwaysKeep = true;
+            // seg.alwaysKeep = true;
             context.isInSelection = false;
             addTextSegment(paragraph, context);
         }
@@ -355,138 +368,22 @@ function processChildren(group: ContentModel_BlockGroup, parent: Node, context: 
     }
 }
 
-function getEffectiveStyle<T>(
-    cssStyle: string,
-    tag: string,
-    tagsToCheck: string[],
-    tagToStyle: string | ((tag: string) => string),
-    styleCallback: (style: string) => void
-) {
-    const style =
-        cssStyle ||
-        (tagsToCheck.indexOf(tag) >= 0
-            ? typeof tagToStyle == 'function'
-                ? tagToStyle(tag)
-                : tagToStyle
-            : null);
-    if (style) {
-        styleCallback(style);
-    }
-}
-
-function getSegmentFormat(node: HTMLElement, context: FormatContext) {
+function getSegmentFormat(element: HTMLElement, context: FormatContext) {
+    const defaultStyle = getElementDefaultStyle(element);
     const result = { ...context.segmentFormat };
-    const tag = getTagOfNode(node);
 
-    if (node.style.fontFamily) {
-        result.fontFamily = node.style.fontFamily;
-    }
-
-    if (node.style.fontSize) {
-        result.fontSize = node.style.fontSize;
-    }
-
-    if (node.style.color) {
-        result.color = node.style.color;
-    }
-
-    if (tag == 'A' && (<HTMLAnchorElement>node).href) {
-        result.linkHref = node.getAttribute('href');
-    }
-
-    getEffectiveStyle(
-        node.style.fontWeight,
-        tag,
-        ['B', 'STRONG'],
-        'bold',
-        style => (result.bold = parseInt(style) >= 700 || ['bold', 'bolder'].indexOf(style) >= 0)
-    );
-
-    getEffectiveStyle(
-        node.style.fontStyle,
-        tag,
-        ['I', 'EM'],
-        'italic',
-        style => (result.italic = style == 'italic')
-    );
-
-    getEffectiveStyle(
-        node.style.textDecoration,
-        tag,
-        ['U'],
-        'underline',
-        style => (result.underline = style.indexOf('underline') >= 0)
-    );
-
-    getEffectiveStyle(
-        node.style.textDecoration,
-        tag,
-        ['S', 'STRIKE'],
-        'line-through',
-        style => (result.strikethrough = style == 'line-through')
-    );
-
-    // getEffectiveStyle(
-    //     node.style.verticalAlign,
-    //     tag,
-    //     ['SUB', 'SUP'],
-    //     tag => (tag == 'SUB' ? 'sub' : 'sup'),
-    //     style =>
-    //         (result.verticalAlign =
-    //             style === 'sub'
-    //                 ? VerticalAlign.Subscript
-    //                 : style == 'sup'
-    //                 ? VerticalAlign.Superscript
-    //                 : VerticalAlign.None)
-    // );
-
-    if (node.style.backgroundColor) {
-        result.backgroundColor = node.style.backgroundColor;
-    } else if (node.style.background) {
-        // TODO
-    }
+    SegmentFormatHandlers.forEach(handler => handler(result, element, defaultStyle));
 
     return result;
 }
 
-function getBlockFormat(node: HTMLElement, context: FormatContext) {
-    const tag = getTagOfNode(node);
+function getBlockFormat(element: HTMLElement, context: FormatContext) {
+    const defaultStyle = getElementDefaultStyle(element);
     const result = {
         ...context.blockFormat,
     };
 
-    const dir = node.dir || node.style.direction;
-    if (dir) {
-        result.direction = dir == 'rtl' ? 'rtl' : 'ltr';
-    }
-
-    const align = node.style.textAlign;
-    if (align) {
-        result.alignment = align == 'right' ? 'right' : align == 'center' ? 'center' : 'right';
-    }
-
-    let marginTop = node.style.marginTop;
-    let marginBottom = node.style.marginBottom;
-
-    if (tag == 'P') {
-        if (!marginTop) {
-            marginTop = '1em';
-        }
-        if (!marginBottom) {
-            marginBottom = '1em';
-        }
-    }
-    if (marginTop) {
-        result.marginTop = marginTop;
-    }
-    if (marginBottom) {
-        result.marginBottom = marginBottom;
-    }
-
-    const indentation = node.style.textIndent;
-    if (indentation) {
-        result.indentation = indentation;
-    }
+    ParagraphFormatHandlers.forEach(handler => handler(result, element, defaultStyle));
 
     return result;
 }

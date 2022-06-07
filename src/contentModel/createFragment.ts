@@ -5,12 +5,12 @@ import {
     ContentModel_Document,
     ContentModel_Paragraph,
     ContentModel_Table,
-} from './Block';
+} from './types/Block';
 import {
     ContentModel_Segment,
     ContentModel_SegmentFormat,
     ContentModel_SegmentType,
-} from './Segment';
+} from './types/Segment';
 
 export interface SelectionContext {
     isInSelection: boolean;
@@ -20,6 +20,22 @@ export interface SelectionContext {
     startOffset?: number;
     endOffset?: number;
 }
+
+const DummySegmentFormat: Required<ContentModel_SegmentFormat> = {
+    bold: false,
+    italic: false,
+    underline: false,
+    subscript: false,
+    superscript: false,
+    strikethrough: false,
+    fontFamily: '',
+    fontSize: '',
+    color: '',
+    backgroundColor: '',
+    linkHref: '',
+    linkTarget: '',
+};
+const SegmentFormatKeys = Object.keys(DummySegmentFormat) as (keyof ContentModel_SegmentFormat)[];
 
 export default function createFragment(
     doc: Document,
@@ -81,7 +97,17 @@ function createParagraph(
     const div = doc.createElement('div');
     parent.appendChild(div);
 
-    const { alignment, direction, indentation, marginBottom, marginTop } = paragraph.format;
+    const {
+        alignment,
+        direction,
+        indentation,
+        marginBottom,
+        marginTop,
+        backgroundColor,
+        lineHeight,
+        whiteSpace,
+    } = paragraph.format;
+
     if (alignment !== undefined) {
         div.style.textAlign = alignment;
     }
@@ -96,6 +122,15 @@ function createParagraph(
     }
     if (marginBottom) {
         div.style.marginBottom = marginBottom;
+    }
+    if (backgroundColor) {
+        div.style.backgroundColor = backgroundColor;
+    }
+    if (lineHeight) {
+        div.style.lineHeight = lineHeight;
+    }
+    if (whiteSpace) {
+        div.style.whiteSpace = whiteSpace;
     }
 
     let previousSegment: ContentModel_Segment | null = null;
@@ -180,18 +215,7 @@ function createTable(
 }
 
 function areSameFormats(f1: ContentModel_SegmentFormat, f2: ContentModel_SegmentFormat) {
-    return (
-        f1.fontFamily == f2.fontFamily &&
-        f1.fontSize == f2.fontSize &&
-        f1.backgroundColor == f2.backgroundColor &&
-        f1.bold == f2.bold &&
-        f1.italic == f2.italic &&
-        f1.underline == f2.underline &&
-        f1.strikethrough == f2.strikethrough &&
-        // f1.verticalAlign == f2.verticalAlign &&
-        f1.linkHref == f2.linkHref &&
-        f1.linkTarget == f1.linkTarget
-    );
+    return SegmentFormatKeys.every(k => f1[k] === f2[k]);
 }
 
 function createSegmentFromContent(
@@ -225,8 +249,10 @@ function createSegmentFromContent(
                     italic,
                     underline,
                     strikethrough,
-                    // verticalAlign,
                     linkHref,
+                    linkTarget,
+                    subscript,
+                    superscript,
                 } = segment.format;
 
                 if (fontFamily) {
@@ -248,6 +274,18 @@ function createSegmentFromContent(
                 if (linkHref) {
                     const a = wrap(span, 'A') as HTMLAnchorElement;
                     a.href = linkHref;
+
+                    if (linkTarget) {
+                        a.target = linkTarget;
+                    }
+                }
+
+                if (superscript) {
+                    wrap(span, 'SUP');
+                }
+
+                if (subscript) {
+                    wrap(span, 'SUB');
                 }
 
                 if (bold) {
@@ -269,20 +307,6 @@ function createSegmentFromContent(
                     // span.style.textDecoration += 'line-through ';
                     wrap(span, 'STRIKE');
                 }
-
-                // if (verticalAlign == VerticalAlign.Subscript) {
-                //     wrap(span, 'SUB');
-                // } else if (verticalAlign == VerticalAlign.Superscript) {
-                //     wrap(span, 'SUP');
-                // }
-
-                //     span.style.verticalAlign =
-                //         verticalAlign == VerticalAlign.Subscript
-                //             ? 'sub'
-                //             : verticalAlign == VerticalAlign.Superscript
-                //             ? 'sup'
-                //             : '';
-                // }
 
                 return span;
             }

@@ -1,7 +1,7 @@
 import createContentModel from './contentModel/createContentModel';
 import createFragment from './contentModel/createFragment';
 import getSelectedSegments from './contentModel/getSelectedSegments';
-import { ContentModel_Document } from './contentModel/Block';
+import { ContentModel_Document } from './contentModel/types/Block';
 import { Editor } from 'roosterjs-editor-core';
 import { IEditor } from 'roosterjs-editor-types';
 
