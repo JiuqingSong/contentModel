@@ -305,7 +305,7 @@ function processElement(
 }
 
 function processSegment(group: ContentModel_BlockGroup, node: HTMLElement, context: FormatContext) {
-    const paragraph = getOrAddParagraph(group, context);
+    let paragraph = getOrAddParagraph(group, context);
     const originalSegmentFormat = context.segmentFormat;
 
     context.segmentFormat = getSegmentFormat(node, context);
@@ -313,6 +313,7 @@ function processSegment(group: ContentModel_BlockGroup, node: HTMLElement, conte
     addTextSegment(paragraph, context);
     processChildren(group, node, context);
 
+    paragraph = getOrAddParagraph(group, context);
     context.segmentFormat = originalSegmentFormat;
     addTextSegment(paragraph, context);
 }
