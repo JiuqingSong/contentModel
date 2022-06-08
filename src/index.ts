@@ -47,24 +47,20 @@ function updateContentModel(source: Node) {
 }
 
 function updateResult(model: ContentModel_Document, updateSelection: boolean) {
-    while (modelLayoutEl.firstChild) {
-        modelLayoutEl.removeChild(modelLayoutEl.firstChild);
-    }
+    modelLayoutEl.innerHTML = '';
 
     const [fragement, context] = createFragment(document, model);
     modelLayoutEl.appendChild(fragement);
     modelHtmlEl.value = modelLayoutEl.innerHTML;
 
     if (updateSelection && context.startContainer && context.endContainer) {
-        editor.runAsync(() => {
-            editor.focus();
-            editor.select(
-                context.startContainer.firstChild,
-                context.startOffset,
-                context.endContainer.firstChild,
-                context.endOffset
-            );
-        });
+        editor.focus();
+        editor.select(
+            context.startContainer.firstChild,
+            context.startOffset,
+            context.endContainer.firstChild,
+            context.endOffset
+        );
     }
 }
 

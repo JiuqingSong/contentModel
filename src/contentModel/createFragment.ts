@@ -225,90 +225,97 @@ function createSegmentFromContent(
     previousSegment: ContentModel_Segment | null,
     previousSpan: HTMLSpanElement | null
 ) {
-    switch (segment.type) {
-        case ContentModel_SegmentType.Text:
-            if (
-                previousSegment &&
-                previousSpan &&
-                areSameFormats(segment.format, previousSegment.format)
-            ) {
-                previousSpan.textContent += segment.text;
-                return previousSpan;
-            } else {
-                const span = doc.createElement('span');
+    if (
+        previousSegment &&
+        previousSpan &&
+        previousSegment.type == ContentModel_SegmentType.Text &&
+        segment.type == ContentModel_SegmentType.Text &&
+        areSameFormats(segment.format, previousSegment.format)
+    ) {
+        previousSpan.textContent += segment.text;
+        return previousSpan;
+    } else {
+        let element: HTMLElement;
 
-                parent.appendChild(span);
-                span.appendChild(doc.createTextNode(segment.text));
+        switch (segment.type) {
+            case ContentModel_SegmentType.Image:
+                element = doc.createElement('img');
+                element.setAttribute('src', segment.src);
+                break;
+            case ContentModel_SegmentType.Text:
+                element = doc.createElement('span');
+                element.appendChild(doc.createTextNode(segment.text));
+                break;
+        }
 
-                const {
-                    fontFamily,
-                    fontSize,
-                    color,
-                    backgroundColor,
-                    bold,
-                    italic,
-                    underline,
-                    strikethrough,
-                    linkHref,
-                    linkTarget,
-                    subscript,
-                    superscript,
-                } = segment.format;
+        if (element) {
+            parent.appendChild(element);
 
-                if (fontFamily) {
-                    span.style.fontFamily = fontFamily;
-                }
+            const {
+                fontFamily,
+                fontSize,
+                color,
+                backgroundColor,
+                bold,
+                italic,
+                underline,
+                strikethrough,
+                linkHref,
+                linkTarget,
+                subscript,
+                superscript,
+            } = segment.format;
 
-                if (fontSize) {
-                    span.style.fontSize = fontSize;
-                }
-
-                if (color) {
-                    span.style.color = color;
-                }
-
-                if (backgroundColor) {
-                    span.style.backgroundColor = backgroundColor;
-                }
-
-                if (linkHref) {
-                    const a = wrap(span, 'A') as HTMLAnchorElement;
-                    a.href = linkHref;
-
-                    if (linkTarget) {
-                        a.target = linkTarget;
-                    }
-                }
-
-                if (superscript) {
-                    wrap(span, 'SUP');
-                }
-
-                if (subscript) {
-                    wrap(span, 'SUB');
-                }
-
-                if (bold) {
-                    // span.style.fontWeight = 'bold';
-                    wrap(span, 'B');
-                }
-
-                if (italic) {
-                    // span.style.fontStyle = 'italic';
-                    wrap(span, 'I');
-                }
-
-                if (underline) {
-                    // span.style.textDecoration += 'underline ';
-                    wrap(span, 'U');
-                }
-
-                if (strikethrough) {
-                    // span.style.textDecoration += 'line-through ';
-                    wrap(span, 'STRIKE');
-                }
-
-                return span;
+            if (fontFamily) {
+                element.style.fontFamily = fontFamily;
             }
+
+            if (fontSize) {
+                element.style.fontSize = fontSize;
+            }
+
+            if (color) {
+                element.style.color = color;
+            }
+
+            if (backgroundColor) {
+                element.style.backgroundColor = backgroundColor;
+            }
+
+            if (linkHref) {
+                const a = wrap(element, 'A') as HTMLAnchorElement;
+                a.href = linkHref;
+
+                if (linkTarget) {
+                    a.target = linkTarget;
+                }
+            }
+
+            if (superscript) {
+                wrap(element, 'SUP');
+            }
+
+            if (subscript) {
+                wrap(element, 'SUB');
+            }
+
+            if (bold) {
+                wrap(element, 'B');
+            }
+
+            if (italic) {
+                wrap(element, 'I');
+            }
+
+            if (underline) {
+                wrap(element, 'U');
+            }
+
+            if (strikethrough) {
+                wrap(element, 'STRIKE');
+            }
+        }
+
+        return element;
     }
 }

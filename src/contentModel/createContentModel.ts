@@ -2,6 +2,7 @@ import getElementDefaultStyle from './getElementDefaultStyle';
 import { getTagOfNode, safeInstanceOf, toArray } from 'roosterjs-editor-dom';
 import { ParagraphFormatHandlers, SegmentFormatHandlers } from './formatHandlers';
 import {
+    ContentModel_Image,
     ContentModel_Segment,
     ContentModel_SegmentFormat,
     ContentModel_SegmentType,
@@ -26,12 +27,7 @@ interface FormatContext {
     range: Range | null;
 }
 
-export default function createContentModel(
-    input: Node | string,
-    range: Range
-): ContentModel_Document {
-    const root =
-        typeof input == 'string' ? new DOMParser().parseFromString(input, 'text/html').body : input;
+export default function createContentModel(root: Node, range: Range): ContentModel_Document {
     const contentModel: ContentModel_Document = {
         blockGroupType: ContentModel_BlockGroupType.Document,
         blockType: ContentModel_BlockType.BlockGroup,
@@ -137,10 +133,13 @@ function processNode(group: ContentModel_BlockGroup, node: Node, context: Format
                 processTable(group, node as HTMLTableElement, context);
                 break;
 
+            case 'IMG':
+                processImage(group, node as HTMLImageElement, context);
+                break;
+
             case 'TD':
             case 'TR':
             case 'TBODY':
-            case 'IMG':
             case 'PRE':
             case 'H1':
             case 'H2':
@@ -191,20 +190,40 @@ function processNode(group: ContentModel_BlockGroup, node: Node, context: Format
     }
 }
 
+function processImage(
+    group: ContentModel_BlockGroup,
+    element: HTMLImageElement,
+    context: FormatContext
+) {
+    let paragraph = getOrAddParagraph(group, context);
+
+    const segmentFormat = getSegmentFormat(element, context);
+    const image: ContentModel_Image = {
+        type: ContentModel_SegmentType.Image,
+        format: segmentFormat,
+        src: element.src,
+        isSelected: context.isInSelection,
+    };
+
+    paragraph.segments.push(image);
+
+    addTextSegment(paragraph, context);
+}
+
 function processTable(
     group: ContentModel_BlockGroup,
-    node: HTMLTableElement,
+    element: HTMLTableElement,
     context: FormatContext
 ) {
     const table: ContentModel_Table = {
         blockType: ContentModel_BlockType.Table,
-        cells: toArray(node.rows).map(_ => []),
+        cells: toArray(element.rows).map(_ => []),
     };
 
     group.blocks.push(table);
 
-    for (let row = 0; row < node.rows.length; row++) {
-        const tr = node.rows[row];
+    for (let row = 0; row < element.rows.length; row++) {
+        const tr = element.rows[row];
         for (let sourceCol = 0, targetCol = 0; sourceCol < tr.cells.length; sourceCol++) {
             for (; table.cells[row][targetCol]; targetCol++) {}
 
