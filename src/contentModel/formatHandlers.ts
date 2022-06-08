@@ -1,167 +1,298 @@
 import { ContentModel_ParagraphFormat } from './types/Block';
 import { ContentModel_SegmentFormat } from './types/Segment';
-import { safeInstanceOf } from 'roosterjs';
+import { safeInstanceOf, wrap } from 'roosterjs-editor-dom';
 
-export type FormatHandlerBase<
-    Format extends ContentModel_ParagraphFormat | ContentModel_SegmentFormat
-> = (format: Format, element: HTMLElement, defaultStyle: Partial<CSSStyleDeclaration>) => void;
+export interface FormatHandlerBase<
+    TFormat extends ContentModel_ParagraphFormat | ContentModel_SegmentFormat
+> {
+    parse: (
+        format: TFormat,
+        element: HTMLElement,
+        defaultStyle: Partial<CSSStyleDeclaration>
+    ) => void;
+    writeBack: (format: TFormat, element: HTMLElement) => void;
+}
 
 export type SegmentFormatHandler = FormatHandlerBase<ContentModel_SegmentFormat>;
 export type ParagraphFormatHandler = FormatHandlerBase<ContentModel_ParagraphFormat>;
 export type FormatHandler = FormatHandlerBase<
-    ContentModel_SegmentFormat | ContentModel_ParagraphFormat
+    ContentModel_ParagraphFormat | ContentModel_SegmentFormat
 >;
 
-const fontFamilyHandler: SegmentFormatHandler = (format, element, defaultStyle) => {
-    const fontFamily = element.style.fontFamily || defaultStyle.fontFamily;
+const fontFamilyHandler: SegmentFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const fontFamily = element.style.fontFamily || defaultStyle.fontFamily;
 
-    if (fontFamily) {
-        format.fontFamily = fontFamily;
-    }
+        if (fontFamily) {
+            format.fontFamily = fontFamily;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.fontFamily) {
+            element.style.fontFamily = format.fontFamily;
+        }
+    },
 };
 
-const fontSizeHandler: SegmentFormatHandler = (format, element, defaultStyle) => {
-    const fontSize = element.style.fontSize || defaultStyle.fontSize;
+const fontSizeHandler: SegmentFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const fontSize = element.style.fontSize || defaultStyle.fontSize;
 
-    if (fontSize) {
-        format.fontSize = fontSize;
-    }
+        if (fontSize) {
+            format.fontSize = fontSize;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.fontSize) {
+            element.style.fontSize = format.fontSize;
+        }
+    },
 };
 
-const textColorHandler: SegmentFormatHandler = (format, element, defaultStyle) => {
-    const textColor = element.style.color || defaultStyle.color;
+const textColorHandler: SegmentFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const textColor = element.style.color || defaultStyle.color;
 
-    if (textColor) {
-        format.color = textColor;
-    }
+        if (textColor) {
+            format.color = textColor;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.color) {
+            element.style.color = format.color;
+        }
+    },
 };
 
-const backColorHandler: FormatHandler = (format, element, defaultStyle) => {
-    const backColor = element.style.backgroundColor || defaultStyle.backgroundColor;
+const backColorHandler: FormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const backColor = element.style.backgroundColor || defaultStyle.backgroundColor;
 
-    if (backColor) {
-        format.backgroundColor = backColor;
-    }
+        if (backColor) {
+            format.backgroundColor = backColor;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.backgroundColor) {
+            element.style.backgroundColor = format.backgroundColor;
+        }
+    },
 };
 
-const hyperLinkHandler: SegmentFormatHandler = (format, element, defaultStyle) => {
-    if (safeInstanceOf(element, 'HTMLAnchorElement')) {
-        const href = element.getAttribute('href');
-        const target = element.target;
+const hyperLinkHandler: SegmentFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        if (element.tagName == 'A') {
+            const href = element.getAttribute('href');
+            const target = element.getAttribute('target');
 
-        if (href) {
-            format.linkHref = href;
+            if (href) {
+                format.linkHref = href;
 
-            if (target) {
-                format.linkTarget = target;
+                if (target) {
+                    format.linkTarget = target;
+                }
             }
         }
-    }
+    },
+    writeBack: (format, element) => {
+        if (format.linkHref) {
+            const a = wrap(element, 'A') as HTMLAnchorElement;
+            a.href = format.linkHref;
+
+            if (format.linkTarget) {
+                a.target = format.linkTarget;
+            }
+        }
+    },
 };
 
-const boldHandler: SegmentFormatHandler = (format, element, defaultStyle) => {
-    const fontWeight = element.style.fontWeight || defaultStyle.fontWeight;
+const boldHandler: SegmentFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const fontWeight = element.style.fontWeight || defaultStyle.fontWeight;
 
-    if (fontWeight == 'bold' || fontWeight == 'bolder' || parseInt(fontWeight) >= 600) {
-        format.bold = true;
-    } else if (
-        fontWeight == 'normal' ||
-        fontWeight == 'lighter' ||
-        fontWeight == 'initial' ||
-        parseInt(fontWeight) < 600
-    ) {
-        format.bold = false;
-    }
+        if (fontWeight == 'bold' || fontWeight == 'bolder' || parseInt(fontWeight) >= 600) {
+            format.bold = true;
+        } else if (
+            fontWeight == 'normal' ||
+            fontWeight == 'lighter' ||
+            fontWeight == 'initial' ||
+            parseInt(fontWeight) < 600
+        ) {
+            format.bold = false;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.bold) {
+            wrap(element, 'B');
+        }
+    },
 };
 
-const italicHandler: SegmentFormatHandler = (format, element, defaultStyle) => {
-    const fontStyle = element.style.fontStyle || defaultStyle.fontStyle;
+const italicHandler: SegmentFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const fontStyle = element.style.fontStyle || defaultStyle.fontStyle;
 
-    if (fontStyle == 'italic' || fontStyle == 'oblique') {
-        format.italic = true;
-    } else if (fontStyle == 'initial' || fontStyle == 'normal') {
-        format.italic = false;
-    }
+        if (fontStyle == 'italic' || fontStyle == 'oblique') {
+            format.italic = true;
+        } else if (fontStyle == 'initial' || fontStyle == 'normal') {
+            format.italic = false;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.italic) {
+            wrap(element, 'I');
+        }
+    },
 };
 
-const underlineHandler: SegmentFormatHandler = (format, element, defaultStyle) => {
-    const textDecoration = element.style.textDecoration || defaultStyle.textDecoration;
+const underlineHandler: SegmentFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const textDecoration = element.style.textDecoration || defaultStyle.textDecoration;
 
-    if (textDecoration?.indexOf('underline') >= 0) {
-        format.underline = true;
-    }
+        if (textDecoration?.indexOf('underline') >= 0) {
+            format.underline = true;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.underline) {
+            wrap(element, 'U');
+        }
+    },
 };
 
-const strikeHandler: SegmentFormatHandler = (format, element, defaultStyle) => {
-    const textDecoration = element.style.textDecoration || defaultStyle.textDecoration;
+const strikeHandler: SegmentFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const textDecoration = element.style.textDecoration || defaultStyle.textDecoration;
 
-    if (textDecoration?.indexOf('line-through') >= 0) {
-        format.strikethrough = true;
-    }
+        if (textDecoration?.indexOf('line-through') >= 0) {
+            format.strikethrough = true;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.strikethrough) {
+            wrap(element, 'STRIKE');
+        }
+    },
 };
 
-const superOrSubScriptHandler: SegmentFormatHandler = (format, element, defaultStyle) => {
-    const verticalAlign = element.style.verticalAlign || defaultStyle.verticalAlign;
+const superOrSubScriptHandler: SegmentFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const verticalAlign = element.style.verticalAlign || defaultStyle.verticalAlign;
 
-    if (verticalAlign == 'sub') {
-        format.subscript = true;
-        format.superscript = false;
-    } else if (verticalAlign == 'super') {
-        format.superscript = true;
-        format.subscript = false;
-    }
+        if (verticalAlign == 'sub') {
+            format.subscript = true;
+            format.superscript = false;
+        } else if (verticalAlign == 'super') {
+            format.superscript = true;
+            format.subscript = false;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.superscript) {
+            wrap(element, 'SUP');
+        }
+
+        if (format.subscript) {
+            wrap(element, 'SUB');
+        }
+    },
 };
 
-const directionHandler: ParagraphFormatHandler = (format, element, defaultStyle) => {
-    const dir = element.style.direction || element.dir || defaultStyle.direction;
+const directionHandler: ParagraphFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const dir = element.style.direction || element.dir || defaultStyle.direction;
 
-    if (dir) {
-        format.direction = dir == 'rtl' ? 'rtl' : 'ltr';
-    }
+        if (dir) {
+            format.direction = dir == 'rtl' ? 'rtl' : 'ltr';
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.direction) {
+            element.style.direction = format.direction;
+        }
+    },
 };
 
-const alignmentHandler: ParagraphFormatHandler = (format, element, defaultStyle) => {
-    const align = element.style.textAlign || defaultStyle.textAlign;
+const alignmentHandler: ParagraphFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const align = element.style.textAlign || defaultStyle.textAlign;
 
-    if (align) {
-        format.alignment = align == 'right' ? 'right' : align == 'center' ? 'center' : 'right';
-    }
+        if (align) {
+            format.alignment = align == 'right' ? 'right' : align == 'center' ? 'center' : 'right';
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.alignment) {
+            element.style.textAlign = format.alignment;
+        }
+    },
 };
 
-const marginHandler: ParagraphFormatHandler = (format, element, defaultStyle) => {
-    const marginTop = element.style.marginTop || defaultStyle.marginTop;
-    const marginBottom = element.style.marginBottom || defaultStyle.marginBottom;
+const marginHandler: ParagraphFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const marginTop = element.style.marginTop || defaultStyle.marginTop;
+        const marginBottom = element.style.marginBottom || defaultStyle.marginBottom;
 
-    if (marginTop) {
-        format.marginTop = marginTop;
-    }
-    if (marginBottom) {
-        format.marginTop = marginBottom;
-    }
+        if (marginTop) {
+            format.marginTop = marginTop;
+        }
+        if (marginBottom) {
+            format.marginTop = marginBottom;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.marginTop) {
+            element.style.marginTop = format.marginTop;
+        }
+        if (format.marginBottom) {
+            element.style.marginBottom = format.marginBottom;
+        }
+    },
 };
 
-const indentationHandler: ParagraphFormatHandler = (format, element, defaultStyle) => {
-    const indentation = element.style.textIndent || defaultStyle.textIndent;
+const indentationHandler: ParagraphFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const indentation = element.style.textIndent || defaultStyle.textIndent;
 
-    if (indentation) {
-        format.indentation = indentation;
-    }
+        if (indentation) {
+            format.indentation = indentation;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.indentation) {
+            element.style.textIndent = format.indentation;
+        }
+    },
 };
 
-const lineHeightHandler: ParagraphFormatHandler = (format, element, defaultStyle) => {
-    const lineHeight = element.style.lineHeight || defaultStyle.lineHeight;
+const lineHeightHandler: ParagraphFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const lineHeight = element.style.lineHeight || defaultStyle.lineHeight;
 
-    if (lineHeight) {
-        format.lineHeight = lineHeight;
-    }
+        if (lineHeight) {
+            format.lineHeight = lineHeight;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.lineHeight) {
+            element.style.lineHeight = format.lineHeight;
+        }
+    },
 };
 
-const whiteSpaceHandler: ParagraphFormatHandler = (format, element, defaultStyle) => {
-    const whiteSpace = element.style.whiteSpace || defaultStyle.whiteSpace;
+const whiteSpaceHandler: ParagraphFormatHandler = {
+    parse: (format, element, defaultStyle) => {
+        const whiteSpace = element.style.whiteSpace || defaultStyle.whiteSpace;
 
-    if (whiteSpace) {
-        format.whiteSpace = whiteSpace;
-    }
+        if (whiteSpace) {
+            format.whiteSpace = whiteSpace;
+        }
+    },
+    writeBack: (format, element) => {
+        if (format.whiteSpace) {
+            element.style.whiteSpace = format.whiteSpace;
+        }
+    },
 };
 
 export const SegmentFormatHandlers: SegmentFormatHandler[] = [

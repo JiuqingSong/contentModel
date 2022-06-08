@@ -1,3 +1,4 @@
+import { ParagraphFormatHandlers, SegmentFormatHandlers } from './formatHandlers';
 import { wrap } from 'roosterjs-editor-dom';
 import {
     ContentModel_Block,
@@ -97,41 +98,7 @@ function createParagraph(
     const div = doc.createElement('div');
     parent.appendChild(div);
 
-    const {
-        alignment,
-        direction,
-        indentation,
-        marginBottom,
-        marginTop,
-        backgroundColor,
-        lineHeight,
-        whiteSpace,
-    } = paragraph.format;
-
-    if (alignment !== undefined) {
-        div.style.textAlign = alignment;
-    }
-    if (direction != undefined) {
-        div.style.direction = direction;
-    }
-    if (indentation != undefined) {
-        div.style.textIndent = indentation;
-    }
-    if (marginTop) {
-        div.style.marginTop = marginTop;
-    }
-    if (marginBottom) {
-        div.style.marginBottom = marginBottom;
-    }
-    if (backgroundColor) {
-        div.style.backgroundColor = backgroundColor;
-    }
-    if (lineHeight) {
-        div.style.lineHeight = lineHeight;
-    }
-    if (whiteSpace) {
-        div.style.whiteSpace = whiteSpace;
-    }
+    ParagraphFormatHandlers.forEach(handler => handler.writeBack(paragraph.format, div));
 
     let previousSegment: ContentModel_Segment | null = null;
     let previousSpan: HTMLElement | null = null;
@@ -251,69 +218,9 @@ function createSegmentFromContent(
         if (element) {
             parent.appendChild(element);
 
-            const {
-                fontFamily,
-                fontSize,
-                color,
-                backgroundColor,
-                bold,
-                italic,
-                underline,
-                strikethrough,
-                linkHref,
-                linkTarget,
-                subscript,
-                superscript,
-            } = segment.format;
-
-            if (fontFamily) {
-                element.style.fontFamily = fontFamily;
-            }
-
-            if (fontSize) {
-                element.style.fontSize = fontSize;
-            }
-
-            if (color) {
-                element.style.color = color;
-            }
-
-            if (backgroundColor) {
-                element.style.backgroundColor = backgroundColor;
-            }
-
-            if (linkHref) {
-                const a = wrap(element, 'A') as HTMLAnchorElement;
-                a.href = linkHref;
-
-                if (linkTarget) {
-                    a.target = linkTarget;
-                }
-            }
-
-            if (superscript) {
-                wrap(element, 'SUP');
-            }
-
-            if (subscript) {
-                wrap(element, 'SUB');
-            }
-
-            if (bold) {
-                wrap(element, 'B');
-            }
-
-            if (italic) {
-                wrap(element, 'I');
-            }
-
-            if (underline) {
-                wrap(element, 'U');
-            }
-
-            if (strikethrough) {
-                wrap(element, 'STRIKE');
-            }
+            SegmentFormatHandlers.forEach(handler => {
+                handler.writeBack(segment.format, element);
+            });
         }
 
         return element;

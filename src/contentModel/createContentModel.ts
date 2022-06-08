@@ -1,9 +1,9 @@
 import getElementDefaultStyle from './getElementDefaultStyle';
+import normalizeModel from './normalizeModel';
 import { getTagOfNode, safeInstanceOf, toArray } from 'roosterjs-editor-dom';
 import { ParagraphFormatHandlers, SegmentFormatHandlers } from './formatHandlers';
 import {
     ContentModel_Image,
-    ContentModel_Segment,
     ContentModel_SegmentFormat,
     ContentModel_SegmentType,
     ContentModel_Text,
@@ -14,7 +14,6 @@ import {
     ContentModel_BlockType,
     ContentModel_Document,
     ContentModel_BlockGroup,
-    ContentModel_Block,
     ContentModel_Paragraph,
     ContentModel_Table,
     ContentModel_TableCell,
@@ -24,74 +23,62 @@ interface FormatContext {
     blockFormat: ContentModel_ParagraphFormat;
     segmentFormat: ContentModel_SegmentFormat;
     isInSelection: boolean;
-    range: Range | null;
+
+    startContainer?: Node;
+    endContainer?: Node;
+    startOffset?: number;
+    endOffset?: number;
 }
 
-export default function createContentModel(root: Node, range: Range): ContentModel_Document {
+export default function createContentModel(root: Node, range: Range | null): ContentModel_Document {
     const contentModel: ContentModel_Document = {
         blockGroupType: ContentModel_BlockGroupType.Document,
         blockType: ContentModel_BlockType.BlockGroup,
         blocks: [],
     };
-    const formatContext: FormatContext = {
+    const context: FormatContext = {
         blockFormat: {},
         segmentFormat: {},
         isInSelection: false,
-        range,
     };
 
-    addParagraph(contentModel, formatContext);
-    processChildren(contentModel, root, formatContext);
+    if (range) {
+        context.startContainer = range.startContainer;
+        context.startOffset = range.startOffset;
+        context.endContainer = range.endContainer;
+        context.endOffset = range.endOffset;
+    }
+
+    addParagraph(contentModel, context);
+    processChildren(contentModel, root, context);
     normalizeModel(contentModel);
 
     return contentModel;
 }
 
-function normalizeModel(group: ContentModel_BlockGroup) {
-    for (let i = group.blocks.length - 1; i >= 0; i--) {
-        const block = group.blocks[i];
+function processChildren(group: ContentModel_BlockGroup, parent: Node, context: FormatContext) {
+    const startOffset = context.startContainer == parent ? context.startOffset : -1;
+    const endOffset = context.endContainer == parent ? context.endOffset : -1;
+    const paragraph = getOrAddParagraph(group, context);
+    let index = 0;
 
-        switch (block.blockType) {
-            case ContentModel_BlockType.BlockGroup:
-                normalizeModel(block);
-                break;
-            case ContentModel_BlockType.List:
-                for (let j = 0; j < block.listItems.length; j++) {
-                    normalizeModel(block.listItems[j]);
-                }
-                break;
-            case ContentModel_BlockType.Paragraph:
-                for (let j = block.segments.length - 1; j >= 0; j--) {
-                    if (isEmptySegment(block.segments[j])) {
-                        block.segments.splice(j, 1);
-                    }
-                }
-                break;
-            case ContentModel_BlockType.Table:
-                for (let r = 0; r < block.cells.length; r++) {
-                    for (let c = 0; c < block.cells[r].length; c++) {
-                        normalizeModel(block.cells[r][c]);
-                    }
-                }
-                break;
+    for (let child = parent.firstChild; child; child = child.nextSibling) {
+        if (index == startOffset) {
+            context.isInSelection = true;
+            const seg = addTextSegment(paragraph, context);
+            // seg.alwaysKeep = true;
         }
 
-        if (isEmptyBlock(block)) {
-            group.blocks.splice(i, 1);
+        if (index == endOffset) {
+            const seg = addTextSegment(paragraph, context);
+            // seg.alwaysKeep = true;
+            context.isInSelection = false;
+            addTextSegment(paragraph, context);
         }
+
+        processNode(group, child, context);
+        index++;
     }
-}
-
-function isEmptySegment(segment: ContentModel_Segment) {
-    return (
-        segment.type == ContentModel_SegmentType.Text &&
-        (!segment.text || /^[\r\n]*$/.test(segment.text))
-        // &&        !segment.alwaysKeep
-    );
-}
-
-function isEmptyBlock(block: ContentModel_Block) {
-    return block.blockType == ContentModel_BlockType.Paragraph && block.segments.length == 0;
 }
 
 function processNode(group: ContentModel_BlockGroup, node: Node, context: FormatContext) {
@@ -159,10 +146,8 @@ function processNode(group: ContentModel_BlockGroup, node: Node, context: Format
         const paragraph = getOrAddParagraph(group, context);
 
         let txt = node.nodeValue;
-        let startOffset =
-            context.range && context.range.startContainer == node ? context.range.startOffset : -1;
-        let endOffset =
-            context.range && context.range.endContainer == node ? context.range.endOffset : -1;
+        let startOffset = context.startContainer == node ? context.startOffset : -1;
+        let endOffset = context.endContainer == node ? context.endOffset : -1;
 
         if (startOffset >= 0) {
             processText(paragraph, txt.substring(0, startOffset), context);
@@ -188,93 +173,6 @@ function processNode(group: ContentModel_BlockGroup, node: Node, context: Format
         processText(paragraph, txt, context);
     } else {
     }
-}
-
-function processImage(
-    group: ContentModel_BlockGroup,
-    element: HTMLImageElement,
-    context: FormatContext
-) {
-    let paragraph = getOrAddParagraph(group, context);
-
-    const segmentFormat = getSegmentFormat(element, context);
-    const image: ContentModel_Image = {
-        type: ContentModel_SegmentType.Image,
-        format: segmentFormat,
-        src: element.src,
-        isSelected: context.isInSelection,
-    };
-
-    paragraph.segments.push(image);
-
-    addTextSegment(paragraph, context);
-}
-
-function processTable(
-    group: ContentModel_BlockGroup,
-    element: HTMLTableElement,
-    context: FormatContext
-) {
-    const table: ContentModel_Table = {
-        blockType: ContentModel_BlockType.Table,
-        cells: toArray(element.rows).map(_ => []),
-    };
-
-    group.blocks.push(table);
-
-    for (let row = 0; row < element.rows.length; row++) {
-        const tr = element.rows[row];
-        for (let sourceCol = 0, targetCol = 0; sourceCol < tr.cells.length; sourceCol++) {
-            for (; table.cells[row][targetCol]; targetCol++) {}
-
-            const td = tr.cells[sourceCol];
-
-            for (let colSpan = 0; colSpan < td.colSpan; colSpan++, targetCol++) {
-                for (let rowSpan = 0; rowSpan < td.rowSpan; rowSpan++) {
-                    const hasTd = colSpan + rowSpan == 0;
-                    const cell: ContentModel_TableCell = {
-                        blockGroupType: ContentModel_BlockGroupType.TableCell,
-                        blockType: ContentModel_BlockType.BlockGroup,
-                        blocks: [],
-                        // td: hasTd ? td : null,
-                        spanLeft: colSpan > 0,
-                        spanAbove: rowSpan > 0,
-                    };
-
-                    addParagraph(cell, context);
-
-                    table.cells[row + rowSpan][targetCol] = cell;
-
-                    if (hasTd) {
-                        processChildren(cell, td, context);
-                    }
-                }
-            }
-        }
-    }
-}
-
-function processText(paragraph: ContentModel_Paragraph, text: string, context: FormatContext) {
-    const textSegment = getOrAddTextSegment(paragraph, context);
-    textSegment.text += text;
-
-    // return lastBlock;
-
-    // if (!/^[\r\n]*$/.test(nodeValue)) {
-    // } else if (lastSegment.text) {
-    //     lastSegment.text += ' ';
-    // }
-}
-
-function processBr(group: ContentModel_BlockGroup, context: FormatContext) {
-    const p = getOrAddParagraph(group, context);
-    const seg = getOrAddTextSegment(p, context);
-
-    if (isEmptySegment(seg)) {
-        // seg.alwaysKeep = true;
-    }
-
-    addParagraph(group, context);
 }
 
 function processElement(
@@ -324,24 +222,6 @@ function processElement(
     }
 }
 
-function processSegment(
-    group: ContentModel_BlockGroup,
-    element: HTMLElement,
-    context: FormatContext
-) {
-    let paragraph = getOrAddParagraph(group, context);
-    const originalSegmentFormat = context.segmentFormat;
-
-    context.segmentFormat = getSegmentFormat(element, context);
-
-    addTextSegment(paragraph, context);
-    processChildren(group, element, context);
-
-    paragraph = getOrAddParagraph(group, context);
-    context.segmentFormat = originalSegmentFormat;
-    addTextSegment(paragraph, context);
-}
-
 function processBlock(
     group: ContentModel_BlockGroup,
     element: HTMLElement,
@@ -361,37 +241,116 @@ function processBlock(
     addParagraph(group, context);
 }
 
-function processChildren(group: ContentModel_BlockGroup, parent: Node, context: FormatContext) {
-    const startOffset =
-        context.range && context.range.startContainer == parent ? context.range.startOffset : -1;
-    const endOffset =
-        context.range && context.range.endContainer == parent ? context.range.endOffset : -1;
-    const paragraph = getOrAddParagraph(group, context);
-    let index = 0;
+function processSegment(
+    group: ContentModel_BlockGroup,
+    element: HTMLElement,
+    context: FormatContext
+) {
+    let paragraph = getOrAddParagraph(group, context);
+    const originalSegmentFormat = context.segmentFormat;
 
-    for (let child = parent.firstChild; child; child = child.nextSibling) {
-        if (index == startOffset) {
-            context.isInSelection = true;
-            const seg = addTextSegment(paragraph, context);
-            // seg.alwaysKeep = true;
-        }
+    context.segmentFormat = getSegmentFormat(element, context);
 
-        if (index == endOffset) {
-            const seg = addTextSegment(paragraph, context);
-            // seg.alwaysKeep = true;
-            context.isInSelection = false;
-            addTextSegment(paragraph, context);
+    addTextSegment(paragraph, context);
+    processChildren(group, element, context);
+
+    paragraph = getOrAddParagraph(group, context);
+    context.segmentFormat = originalSegmentFormat;
+    addTextSegment(paragraph, context);
+}
+
+function processBr(group: ContentModel_BlockGroup, context: FormatContext) {
+    const p = getOrAddParagraph(group, context);
+    const seg = getOrAddTextSegment(p, context);
+
+    // if (isEmptySegment(seg)) {
+    // seg.alwaysKeep = true;
+    // }
+
+    addParagraph(group, context);
+}
+
+function processTable(
+    group: ContentModel_BlockGroup,
+    element: HTMLTableElement,
+    context: FormatContext
+) {
+    const table: ContentModel_Table = {
+        blockType: ContentModel_BlockType.Table,
+        cells: toArray(element.rows).map(_ => []),
+    };
+
+    group.blocks.push(table);
+
+    for (let row = 0; row < element.rows.length; row++) {
+        const tr = element.rows[row];
+        for (let sourceCol = 0, targetCol = 0; sourceCol < tr.cells.length; sourceCol++) {
+            for (; table.cells[row][targetCol]; targetCol++) {}
+
+            const td = tr.cells[sourceCol];
+
+            for (let colSpan = 0; colSpan < td.colSpan; colSpan++, targetCol++) {
+                for (let rowSpan = 0; rowSpan < td.rowSpan; rowSpan++) {
+                    const hasTd = colSpan + rowSpan == 0;
+                    const cell: ContentModel_TableCell = {
+                        blockGroupType: ContentModel_BlockGroupType.TableCell,
+                        blockType: ContentModel_BlockType.BlockGroup,
+                        blocks: [],
+                        // td: hasTd ? td : null,
+                        spanLeft: colSpan > 0,
+                        spanAbove: rowSpan > 0,
+                    };
+
+                    addParagraph(cell, context);
+
+                    table.cells[row + rowSpan][targetCol] = cell;
+
+                    if (hasTd) {
+                        processChildren(cell, td, context);
+                    }
+                }
+            }
         }
-        processNode(group, child, context);
-        index++;
     }
+}
+
+function processImage(
+    group: ContentModel_BlockGroup,
+    element: HTMLImageElement,
+    context: FormatContext
+) {
+    let paragraph = getOrAddParagraph(group, context);
+
+    const segmentFormat = getSegmentFormat(element, context);
+    const image: ContentModel_Image = {
+        type: ContentModel_SegmentType.Image,
+        format: segmentFormat,
+        src: element.src,
+        isSelected: context.isInSelection,
+    };
+
+    paragraph.segments.push(image);
+
+    addTextSegment(paragraph, context);
+}
+
+function processText(paragraph: ContentModel_Paragraph, text: string, context: FormatContext) {
+    const textSegment = getOrAddTextSegment(paragraph, context);
+    textSegment.text += text;
+
+    // return lastBlock;
+
+    // if (!/^[\r\n]*$/.test(nodeValue)) {
+    // } else if (lastSegment.text) {
+    //     lastSegment.text += ' ';
+    // }
 }
 
 function getSegmentFormat(element: HTMLElement, context: FormatContext) {
     const defaultStyle = getElementDefaultStyle(element);
     const result = { ...context.segmentFormat };
 
-    SegmentFormatHandlers.forEach(handler => handler(result, element, defaultStyle));
+    SegmentFormatHandlers.forEach(handler => handler.parse(result, element, defaultStyle));
 
     return result;
 }
@@ -402,7 +361,7 @@ function getBlockFormat(element: HTMLElement, context: FormatContext) {
         ...context.blockFormat,
     };
 
-    ParagraphFormatHandlers.forEach(handler => handler(result, element, defaultStyle));
+    ParagraphFormatHandlers.forEach(handler => handler.parse(result, element, defaultStyle));
 
     return result;
 }
