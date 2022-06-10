@@ -155,11 +155,7 @@ export const generalProcessor: ElementProcessor = (group, context, element, defa
 
 export const brProcessor: ElementProcessor = (group, context) => {
     const paragraph = getOrAddParagraph(group, context);
-    const segment = getOrAddTextSegment(paragraph, context);
-
-    // if (isEmptySegment(seg)) {
-    // seg.alwaysKeep = true;
-    // }
+    paragraph.endWithBr = true;
 
     addParagraph(group, context);
 };

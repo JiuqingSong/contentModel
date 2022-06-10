@@ -136,7 +136,7 @@ function createParagraph(
         previousSpan = newSpan;
     });
 
-    if (!div.textContent) {
+    if (paragraph.endWithBr) {
         div.appendChild(doc.createElement('br'));
     }
 }

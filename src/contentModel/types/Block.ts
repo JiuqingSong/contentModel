@@ -44,6 +44,7 @@ export interface ContentModel_Paragraph
     extends ContentModel_BlockBase<ContentModel_BlockType.Paragraph> {
     format: ContentModel_ParagraphFormat;
     segments: ContentModel_Segment[];
+    endWithBr?: boolean;
 }
 
 export interface ContentModel_BlockGroupBase<T extends ContentModel_BlockGroupType>
