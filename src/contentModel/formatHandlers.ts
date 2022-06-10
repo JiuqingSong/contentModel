@@ -237,7 +237,7 @@ const marginHandler: ParagraphFormatHandler = {
             format.marginTop = marginTop;
         }
         if (marginBottom) {
-            format.marginTop = marginBottom;
+            format.marginBottom = marginBottom;
         }
     },
     writeBack: (format, element) => {
