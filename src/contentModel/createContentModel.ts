@@ -1,7 +1,8 @@
 import getElementDefaultStyle from './getElementDefaultStyle';
 import normalizeModel from './normalizeModel';
-import { getTagOfNode, safeInstanceOf, toArray } from 'roosterjs-editor-dom';
+import { NodeType } from 'roosterjs-editor-types';
 import { ParagraphFormatHandlers, SegmentFormatHandlers } from './formatHandlers';
+import { toArray } from 'roosterjs-editor-dom';
 import {
     ContentModel_Image,
     ContentModel_SegmentFormat,
@@ -49,7 +50,6 @@ export default function createContentModel(root: Node, range: Range | null): Con
         context.endOffset = range.endOffset;
     }
 
-    addParagraph(contentModel, context);
     processChildren(contentModel, root, context);
     normalizeModel(contentModel);
 
@@ -82,96 +82,100 @@ function processChildren(group: ContentModel_BlockGroup, parent: Node, context: 
 }
 
 function processNode(group: ContentModel_BlockGroup, node: Node, context: FormatContext) {
-    if (safeInstanceOf(node, 'HTMLElement')) {
-        switch (getTagOfNode(node)) {
-            case 'DIV':
+    switch (node.nodeType) {
+        case NodeType.Element:
+            const element = node as HTMLElement;
+            switch (element.tagName) {
+                case 'DIV':
 
-            // TODO
-            case 'P':
-            case 'OL':
-            case 'UL':
-            case 'LI':
-                processElement(group, node, 'block', context);
-                break;
-
-            case 'BR':
-                processBr(group, context);
-                break;
-            case 'SPAN':
-            case 'FONT':
-            case 'A':
-            case 'B':
-            case 'STRONG':
-            case 'I':
-            case 'EM':
-            case 'U':
-            case 'SUB':
-            case 'SUP':
-            case 'S':
-            case 'STRIKE':
-                processElement(group, node, 'inline', context);
-                break;
-
-            case 'BODY':
-                processChildren(group, node, context);
-                break;
-
-            case 'TABLE':
-                processTable(group, node as HTMLTableElement, context);
-                break;
-
-            case 'IMG':
-                processImage(group, node as HTMLImageElement, context);
-                break;
-
-            case 'TD':
-            case 'TR':
-            case 'TBODY':
-            case 'PRE':
-            case 'H1':
-            case 'H2':
-            case 'H3':
-            case 'H4':
-            case 'H5':
-            case 'H6':
-            case 'CODE':
-            case 'CENTER':
-            case 'BLOCKQUOTE':
-            case 'STYLE':
-            case 'HR':
                 // TODO
-                break;
-        }
-    } else if (safeInstanceOf(node, 'Text')) {
-        const paragraph = getOrAddParagraph(group, context);
+                case 'P':
+                case 'OL':
+                case 'UL':
+                case 'LI':
+                    processElement(group, element, 'block', context);
+                    break;
 
-        let txt = node.nodeValue;
-        let startOffset = context.startContainer == node ? context.startOffset : -1;
-        let endOffset = context.endContainer == node ? context.endOffset : -1;
+                case 'BR':
+                    processBr(group, context);
+                    break;
+                case 'SPAN':
+                case 'FONT':
+                case 'A':
+                case 'B':
+                case 'STRONG':
+                case 'I':
+                case 'EM':
+                case 'U':
+                case 'SUB':
+                case 'SUP':
+                case 'S':
+                case 'STRIKE':
+                    processElement(group, element, 'inline', context);
+                    break;
 
-        if (startOffset >= 0) {
-            processText(paragraph, txt.substring(0, startOffset), context);
-            context.isInSelection = true;
+                case 'BODY':
+                    processChildren(group, element, context);
+                    break;
 
-            const seg = addTextSegment(paragraph, context);
-            // seg.alwaysKeep = true;
+                case 'TABLE':
+                    processTable(group, element as HTMLTableElement, context);
+                    break;
 
-            txt = txt.substring(startOffset);
-            endOffset -= startOffset;
-        }
+                case 'IMG':
+                    processImage(group, element as HTMLImageElement, context);
+                    break;
 
-        if (endOffset >= 0) {
-            addTextSegment(paragraph, context);
+                case 'TD':
+                case 'TR':
+                case 'TBODY':
+                case 'PRE':
+                case 'H1':
+                case 'H2':
+                case 'H3':
+                case 'H4':
+                case 'H5':
+                case 'H6':
+                case 'CODE':
+                case 'CENTER':
+                case 'BLOCKQUOTE':
+                case 'STYLE':
+                case 'HR':
+                    // TODO
+                    break;
+            }
+            break;
 
-            processText(paragraph, txt.substring(0, endOffset), context);
-            context.isInSelection = false;
+        case NodeType.Text:
+            const paragraph = getOrAddParagraph(group, context);
 
-            addTextSegment(paragraph, context);
-            txt = txt.substring(endOffset);
-        }
+            let txt = node.nodeValue;
+            let startOffset = context.startContainer == node ? context.startOffset : -1;
+            let endOffset = context.endContainer == node ? context.endOffset : -1;
 
-        processText(paragraph, txt, context);
-    } else {
+            if (startOffset >= 0) {
+                processText(paragraph, txt.substring(0, startOffset), context);
+                context.isInSelection = true;
+
+                const seg = addTextSegment(paragraph, context);
+                // seg.alwaysKeep = true;
+
+                txt = txt.substring(startOffset);
+                endOffset -= startOffset;
+            }
+
+            if (endOffset >= 0) {
+                addTextSegment(paragraph, context);
+
+                processText(paragraph, txt.substring(0, endOffset), context);
+                context.isInSelection = false;
+
+                addTextSegment(paragraph, context);
+                txt = txt.substring(endOffset);
+            }
+
+            processText(paragraph, txt, context);
+            break;
     }
 }
 
@@ -301,8 +305,6 @@ function processTable(
                         spanAbove: rowSpan > 0,
                     };
 
-                    addParagraph(cell, context);
-
                     table.cells[row + rowSpan][targetCol] = cell;
 
                     if (hasTd) {
@@ -330,8 +332,6 @@ function processImage(
     };
 
     paragraph.segments.push(image);
-
-    addTextSegment(paragraph, context);
 }
 
 function processText(paragraph: ContentModel_Paragraph, text: string, context: FormatContext) {
@@ -372,7 +372,7 @@ function getOrAddParagraph(
 ): ContentModel_Paragraph {
     const lastBlock = group.blocks[group.blocks.length - 1];
 
-    return lastBlock.blockType == ContentModel_BlockType.Paragraph
+    return lastBlock?.blockType == ContentModel_BlockType.Paragraph
         ? lastBlock
         : addParagraph(group, context);
 }
@@ -382,7 +382,7 @@ function getOrAddTextSegment(
     context: FormatContext
 ): ContentModel_Text {
     const lastSegment = paragraph.segments[paragraph.segments.length - 1];
-    return lastSegment.type == ContentModel_SegmentType.Text
+    return lastSegment?.type == ContentModel_SegmentType.Text
         ? lastSegment
         : addTextSegment(paragraph, context);
 }
@@ -401,8 +401,6 @@ function addParagraph(
     };
 
     group.blocks.push(paragraph);
-
-    addTextSegment(paragraph, context);
 
     return paragraph;
 }
