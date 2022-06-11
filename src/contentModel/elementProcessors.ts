@@ -147,8 +147,8 @@ export function containerProcessor(
 export const generalProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
     const processor =
         BlockDisplay.indexOf(element.style.display || defaultStyle.display) >= 0
-            ? segmentProcessor
-            : blockProcessor;
+            ? blockProcessor
+            : segmentProcessor;
 
     processor(group, context, element, defaultStyle);
 };
