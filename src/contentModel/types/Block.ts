@@ -24,6 +24,7 @@ export interface ContentModel_ParagraphFormat {
     backgroundColor?: string;
     marginTop?: string;
     marginBottom?: string;
+    marginLeft?: string;
     lineHeight?: string;
     whiteSpace?: string;
 }

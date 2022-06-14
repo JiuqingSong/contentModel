@@ -28,6 +28,7 @@ const BlockDisplay = ['block', 'flex', 'grid', 'list-item'];
 //     'inline-table',
 //     'contents',
 // ];
+
 // const OtherDisplay = [
 //     'table',
 //     'table-caption',
@@ -97,14 +98,15 @@ export function containerProcessor(
             case Node.ELEMENT_NODE:
                 const element = child as HTMLElement;
                 const handler = context.tagHandlers[element.tagName];
+                const processor = handler?.processor || generalProcessor;
+                const format = handler
+                    ? typeof handler.style === 'function'
+                        ? handler.style(element)
+                        : handler.style
+                    : {};
 
-                if (handler) {
-                    const format =
-                        typeof handler.style === 'function'
-                            ? handler.style(element)
-                            : handler.style;
-                    handler.processor(group, context, element, format || {});
-                }
+                processor(group, context, element, format || {});
+
                 break;
 
             case Node.TEXT_NODE:

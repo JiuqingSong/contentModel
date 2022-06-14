@@ -37,6 +37,18 @@ export const blockquote: DefaultFormatParserType = {
     marginRight: '40px',
 };
 
+export const dl: DefaultFormatParserType = {
+    ...block,
+    marginTop: '1em',
+    marginBottom: '1em',
+};
+
+export const dd: DefaultFormatParserType = {
+    ...block,
+    marginLeft: '40px',
+    marginRight: '40px',
+};
+
 export const center: DefaultFormatParserType = {
     ...block,
     textAlign: 'center',
@@ -56,6 +68,11 @@ export const b: DefaultFormatParserType = {
 
 export const i: DefaultFormatParserType = {
     fontStyle: 'italic',
+};
+
+export const address: DefaultFormatParserType = {
+    ...block,
+    ...i,
 };
 
 export const li: DefaultFormatParserType = {

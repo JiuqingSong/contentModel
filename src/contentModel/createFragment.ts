@@ -2,6 +2,7 @@ import { ParagraphFormatHandlers, SegmentFormatHandlers } from './formatHandlers
 import { wrap } from 'roosterjs-editor-dom';
 import {
     ContentModel_Block,
+    ContentModel_BlockGroupType,
     ContentModel_BlockType,
     ContentModel_Document,
     ContentModel_Paragraph,
@@ -80,7 +81,22 @@ function createBlockFromContentModel(
             break;
 
         case ContentModel_BlockType.BlockGroup:
-            block.blocks.forEach(block => createBlockFromContentModel(doc, parent, block, context));
+            let newParent = parent;
+
+            switch (block.blockGroupType) {
+                case ContentModel_BlockGroupType.Code: // TODO
+                case ContentModel_BlockGroupType.Document: // TODO
+                case ContentModel_BlockGroupType.Entity: // TODO
+                case ContentModel_BlockGroupType.Header: // TODO
+                case ContentModel_BlockGroupType.ListItem: // TODO
+                case ContentModel_BlockGroupType.Quote: // TODO
+                case ContentModel_BlockGroupType.TableCell: // TODO
+                    break;
+            }
+
+            block.blocks.forEach(childBlock =>
+                createBlockFromContentModel(doc, newParent, childBlock, context)
+            );
 
             break;
         case ContentModel_BlockType.Paragraph:
