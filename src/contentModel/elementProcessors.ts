@@ -157,9 +157,11 @@ export const generalProcessor: ElementProcessor = (group, context, element, defa
 
 export const brProcessor: ElementProcessor = (group, context) => {
     const paragraph = getOrAddParagraph(group, context);
-    paragraph.endWithBr = true;
-
-    addParagraph(group, context);
+    paragraph.segments.push({
+        type: ContentModel_SegmentType.Br,
+        format: {},
+        isSelected: context.isInSelection,
+    });
 };
 
 export const tableProcessor: ElementProcessor = (group, context, element) => {

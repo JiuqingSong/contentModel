@@ -151,10 +151,6 @@ function createParagraph(
 
         previousSpan = newSpan;
     });
-
-    if (paragraph.endWithBr) {
-        div.appendChild(doc.createElement('br'));
-    }
 }
 
 function createTable(
@@ -228,6 +224,10 @@ function createSegmentFromContent(
             case ContentModel_SegmentType.Text:
                 element = doc.createElement('span');
                 element.appendChild(doc.createTextNode(segment.text));
+                break;
+
+            case ContentModel_SegmentType.Br:
+                element = doc.createElement('br');
                 break;
         }
 

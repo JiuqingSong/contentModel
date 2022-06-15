@@ -89,9 +89,5 @@ function isEmptySegment(segment: ContentModel_Segment) {
 }
 
 function isEmptyBlock(block: ContentModel_Block) {
-    return (
-        block.blockType == ContentModel_BlockType.Paragraph &&
-        block.segments.length == 0 &&
-        !block.endWithBr
-    );
+    return block.blockType == ContentModel_BlockType.Paragraph && block.segments.length == 0;
 }

@@ -1,6 +1,7 @@
 export const enum ContentModel_SegmentType {
     Text,
     Image,
+    Br,
     Entity,
 }
 
@@ -39,7 +40,13 @@ export interface ContentModel_Image
     // alwaysKeep: true;
 }
 
+export interface ContentModel_Br extends ContentModel_SegmentBase<ContentModel_SegmentType.Br> {}
+
 export interface ContentModel_Entity
     extends ContentModel_SegmentBase<ContentModel_SegmentType.Entity> {}
 
-export type ContentModel_Segment = ContentModel_Text | ContentModel_Image | ContentModel_Entity;
+export type ContentModel_Segment =
+    | ContentModel_Text
+    | ContentModel_Image
+    | ContentModel_Entity
+    | ContentModel_Br;
