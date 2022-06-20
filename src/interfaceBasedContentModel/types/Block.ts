@@ -1,3 +1,4 @@
+import { ContentModel_ParagraphFormat } from '../../common/commonTypes';
 import { ContentModel_Segment } from './Segment';
 
 export const enum ContentModel_BlockType {
@@ -15,18 +16,6 @@ export const enum ContentModel_BlockGroupType {
     ListItem,
     TableCell,
     Entity,
-}
-
-export interface ContentModel_ParagraphFormat {
-    direction?: 'ltr' | 'rtl';
-    alignment?: 'left' | 'center' | 'right';
-    indentation?: string;
-    backgroundColor?: string;
-    marginTop?: string;
-    marginBottom?: string;
-    marginLeft?: string;
-    lineHeight?: string;
-    whiteSpace?: string;
 }
 
 export interface ContentModel_BlockBase<T extends ContentModel_BlockType> {

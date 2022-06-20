@@ -1,25 +1,10 @@
+import { ContentModel_SegmentFormat } from '../../common/commonTypes';
+
 export const enum ContentModel_SegmentType {
     Text,
     Image,
     Br,
     Entity,
-}
-
-export interface ContentModel_SegmentFormat {
-    bold?: boolean;
-    italic?: boolean;
-    underline?: boolean;
-    superscript?: boolean;
-    subscript?: boolean;
-    strikethrough?: boolean;
-
-    fontFamily?: string;
-    fontSize?: string;
-    color?: string;
-    backgroundColor?: string;
-
-    linkHref?: string;
-    linkTarget?: string;
 }
 
 export interface ContentModel_SegmentBase<T extends ContentModel_SegmentType> {

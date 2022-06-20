@@ -25,7 +25,7 @@ import {
     sup,
     u,
     DefaultFormatParserType,
-} from './defaultStyles';
+} from '../common/defaultStyles';
 
 function createTagHandler(style: DefaultFormatParserType, processor: ElementProcessor): TagHandler {
     return {

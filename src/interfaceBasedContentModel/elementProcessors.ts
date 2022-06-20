@@ -1,15 +1,10 @@
-import { DefaultFormatParserType } from './defaultStyles';
-import { ParagraphFormatHandlers, SegmentFormatHandlers } from './formatHandlers';
+import { ContentModel_Image, ContentModel_SegmentType, ContentModel_Text } from './types/Segment';
+import { ContentModel_ParagraphFormat, ContentModel_SegmentFormat } from '../common/commonTypes';
+import { DefaultFormatParserType } from '../common/defaultStyles';
+import { ParagraphFormatHandlers, SegmentFormatHandlers } from '../common/formatHandlers';
 import { toArray } from 'roosterjs-editor-dom';
 import {
-    ContentModel_SegmentFormat,
-    ContentModel_Text,
-    ContentModel_SegmentType,
-    ContentModel_Image,
-} from './types/Segment';
-import {
     ContentModel_BlockGroup,
-    ContentModel_ParagraphFormat,
     ContentModel_Table,
     ContentModel_BlockType,
     ContentModel_Paragraph,

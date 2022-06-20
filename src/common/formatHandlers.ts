@@ -1,6 +1,5 @@
-import { ContentModel_ParagraphFormat } from './types/Block';
-import { ContentModel_SegmentFormat } from './types/Segment';
-import { safeInstanceOf, wrap } from 'roosterjs-editor-dom';
+import { ContentModel_ParagraphFormat, ContentModel_SegmentFormat } from './commonTypes';
+import { wrap } from 'roosterjs-editor-dom';
 
 export interface FormatHandlerBase<
     TFormat extends ContentModel_ParagraphFormat | ContentModel_SegmentFormat

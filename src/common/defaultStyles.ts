@@ -1,6 +1,3 @@
-import { ContentModel_BlockGroup, ContentModel_ParagraphFormat } from './types/Block';
-import { ContentModel_SegmentFormat } from './types/Segment';
-
 const FontSizes = ['10px', '13px', '16px', '18px', '24px', '32px', '48px'];
 
 function getFontSize(size: string) {

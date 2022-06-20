@@ -1,5 +1,6 @@
-import { ParagraphFormatHandlers, SegmentFormatHandlers } from './formatHandlers';
-import { wrap } from 'roosterjs-editor-dom';
+import { areSameFormats, SelectionContext } from '../common/commonTypes';
+import { ContentModel_Segment, ContentModel_SegmentType } from './types/Segment';
+import { ParagraphFormatHandlers, SegmentFormatHandlers } from '../common/formatHandlers';
 import {
     ContentModel_Block,
     ContentModel_BlockGroupType,
@@ -8,36 +9,6 @@ import {
     ContentModel_Paragraph,
     ContentModel_Table,
 } from './types/Block';
-import {
-    ContentModel_Segment,
-    ContentModel_SegmentFormat,
-    ContentModel_SegmentType,
-} from './types/Segment';
-
-export interface SelectionContext {
-    isInSelection: boolean;
-    previousSelectionAnchor: HTMLElement | null;
-    startContainer?: Node;
-    endContainer?: Node;
-    startOffset?: number;
-    endOffset?: number;
-}
-
-const DummySegmentFormat: Required<ContentModel_SegmentFormat> = {
-    bold: false,
-    italic: false,
-    underline: false,
-    subscript: false,
-    superscript: false,
-    strikethrough: false,
-    fontFamily: '',
-    fontSize: '',
-    color: '',
-    backgroundColor: '',
-    linkHref: '',
-    linkTarget: '',
-};
-const SegmentFormatKeys = Object.keys(DummySegmentFormat) as (keyof ContentModel_SegmentFormat)[];
 
 export default function createFragment(
     doc: Document,
@@ -191,10 +162,6 @@ function createTable(
             }
         }
     }
-}
-
-function areSameFormats(f1: ContentModel_SegmentFormat, f2: ContentModel_SegmentFormat) {
-    return SegmentFormatKeys.every(k => f1[k] === f2[k]);
 }
 
 function createSegmentFromContent(
