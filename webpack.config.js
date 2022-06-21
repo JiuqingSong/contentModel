@@ -23,9 +23,9 @@ module.exports = {
             },
         ],
     },
-    optimization: {
-        minimize: true,
-    },
+    // optimization: {
+    //     minimize: true,
+    // },
     watch: true,
     stats: 'minimal',
     devServer: {
