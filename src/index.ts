@@ -121,7 +121,7 @@ function getDepth(root: Node): number {
 
 function runPerfTest(data: string, testId: string) {
     const body = new DOMParser().parseFromString(data, 'text/html').body;
-    const TestCount = 100;
+    const TestCount = 1000;
     console.log(
         `${testId}: Length: ${data.length}, Elements: ${
             body.getElementsByTagName('*').length
@@ -134,61 +134,61 @@ function runPerfTest(data: string, testId: string) {
     // let m1_ = createInterfaceBasedContentModel(body, null);
     let m2_ = createClassBasedContentModel(body, null);
 
-    let m1 = []; //createInterfaceBasedContentModel(body, null);
-    let m2 = []; // createClassBasedContentModel(body, null);
+    let m1 = createInterfaceBasedContentModel(body, null);
+    let m2 = createClassBasedContentModel(body, null);
     let d1 = [];
     let d2 = [];
 
-    // performance.mark(classBasedMarkerNames.start);
+    performance.mark(classBasedMarkerNames.start);
 
     for (let i = 0; i < TestCount; i++) {
         m2[i] = createClassBasedContentModel(body, null);
     }
 
-    // performance.mark(classBasedMarkerNames.middle);
+    performance.mark(classBasedMarkerNames.middle);
 
-    // for (let i = 0; i < TestCount; i++) {
-    //     d2[i] = m2_.createFragment();
-    // }
+    for (let i = 0; i < TestCount; i++) {
+        d2[i] = m2[i].createFragment();
+    }
 
-    // performance.mark(classBasedMarkerNames.end);
+    performance.mark(classBasedMarkerNames.end);
 
-    // performance.mark(interfaceBasedMarkerNames.start);
+    performance.mark(interfaceBasedMarkerNames.start);
 
-    // for (let i = 0; i < TestCount; i++) {
-    //     m1[i] = createInterfaceBasedContentModel(body, null);
-    // }
+    for (let i = 0; i < TestCount; i++) {
+        m1[i] = createInterfaceBasedContentModel(body, null);
+    }
 
-    // performance.mark(interfaceBasedMarkerNames.middle);
+    performance.mark(interfaceBasedMarkerNames.middle);
 
-    // for (let i = 0; i < TestCount; i++) {
-    //     d1[i] = createFragment(document, m1_);
-    // }
+    for (let i = 0; i < TestCount; i++) {
+        d1[i] = createFragment(document, m1[i]);
+    }
 
-    // performance.mark(interfaceBasedMarkerNames.end);
+    performance.mark(interfaceBasedMarkerNames.end);
 
-    // const measure1 = performance.measure(
-    //     `measure_interface_create`,
-    //     interfaceBasedMarkerNames.start,
-    //     interfaceBasedMarkerNames.middle
-    // );
-    // const measure2 = performance.measure(
-    //     `measure_interface_todom`,
-    //     interfaceBasedMarkerNames.middle,
-    //     interfaceBasedMarkerNames.end
-    // );
-    // const measure3 = performance.measure(
-    //     `measure_class_create`,
-    //     classBasedMarkerNames.start,
-    //     classBasedMarkerNames.middle
-    // );
-    // const measure4 = performance.measure(
-    //     `measure_class_todom`,
-    //     classBasedMarkerNames.middle,
-    //     classBasedMarkerNames.end
-    // );
+    const measure1 = performance.measure(
+        `measure_interface_create`,
+        interfaceBasedMarkerNames.start,
+        interfaceBasedMarkerNames.middle
+    );
+    const measure2 = performance.measure(
+        `measure_interface_todom`,
+        interfaceBasedMarkerNames.middle,
+        interfaceBasedMarkerNames.end
+    );
+    const measure3 = performance.measure(
+        `measure_class_create`,
+        classBasedMarkerNames.start,
+        classBasedMarkerNames.middle
+    );
+    const measure4 = performance.measure(
+        `measure_class_todom`,
+        classBasedMarkerNames.middle,
+        classBasedMarkerNames.end
+    );
 
-    // console.log([measure1, measure2, measure3, measure4].map(m => m.duration));
+    console.log([measure1, measure2, measure3, measure4].map(m => m.duration));
 
     (<any>window)[testId] = [m1, m2, d1, d2];
 }
