@@ -55,16 +55,15 @@ function updateResult(model: ContentModel_Document, updateSelection: boolean) {
     modelLayoutEl.innerHTML = '';
 
     const [fragment, context] = createFragment(document, model);
-    // const [fragment, context] = model.createFragment();
     modelLayoutEl.appendChild(fragment);
     modelHtmlEl.value = modelLayoutEl.innerHTML;
 
-    if (updateSelection && context.startContainer && context.endContainer) {
+    if (updateSelection && context) {
         editor.focus();
         editor.select(
-            context.startContainer.firstChild,
+            context.startContainer,
             context.startOffset,
-            context.endContainer.firstChild,
+            context.endContainer,
             context.endOffset
         );
     }

@@ -29,7 +29,7 @@ export interface ContentModel_ParagraphFormat {
 
 export interface SelectionContext {
     isInSelection: boolean;
-    previousSelectionAnchor: HTMLElement | null;
+    lastElement: HTMLElement | null;
     startContainer?: Node;
     endContainer?: Node;
     startOffset?: number;

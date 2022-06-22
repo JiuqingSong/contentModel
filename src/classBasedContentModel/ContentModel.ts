@@ -200,8 +200,8 @@ export class ContentModel_Paragraph extends ContentModel_Block {
                 pendingStartContainer = true;
             } else if (!segment.isSegmentSelected() && context.isInSelection) {
                 context.isInSelection = false;
-                context.endContainer = context.previousSelectionAnchor;
-                context.endOffset = context.previousSelectionAnchor?.textContent.length || 0;
+                context.endContainer = context.lastElement;
+                context.endOffset = context.lastElement?.textContent.length || 0;
             }
 
             const newSpan = segment.toDOM(doc, div, previousSegment, previousSpan);
@@ -217,7 +217,7 @@ export class ContentModel_Paragraph extends ContentModel_Block {
             }
 
             if (context.isInSelection) {
-                context.previousSelectionAnchor = newSpan;
+                context.lastElement = newSpan;
             }
 
             previousSpan = newSpan;
@@ -361,13 +361,11 @@ export class ContentModel_BlockGroup extends ContentModel_Block {
         for (let child = parent.firstChild; child; child = child.nextSibling) {
             if (index == startOffset) {
                 context.isInSelection = true;
-                const seg = paragraph.addTextSegment(context);
-                // seg.alwaysKeep = true;
+                paragraph.addTextSegment(context);
             }
 
             if (index == endOffset) {
-                const seg = paragraph.addTextSegment(context);
-                // seg.alwaysKeep = true;
+                paragraph.addTextSegment(context);
                 context.isInSelection = false;
                 paragraph.addTextSegment(context);
             }
@@ -399,8 +397,7 @@ export class ContentModel_BlockGroup extends ContentModel_Block {
                         paragraph.textProcessor(txt.substring(0, startOffset), context);
                         context.isInSelection = true;
 
-                        const seg = paragraph.addTextSegment(context);
-                        // seg.alwaysKeep = true;
+                        paragraph.addTextSegment(context);
 
                         txt = txt.substring(startOffset!);
                         endOffset! -= startOffset!;
@@ -466,21 +463,21 @@ export class ContentModel_Document extends ContentModel_BlockGroup {
         const fragment = this.document.createDocumentFragment();
         const context: SelectionContext = {
             isInSelection: false,
-            previousSelectionAnchor: null,
+            lastElement: null,
+            // previousSelectionAnchor: null,
         };
 
         this.toDOM(this.document, fragment, context);
 
         if (context.startContainer && !context.endContainer) {
-            if (context.previousSelectionAnchor) {
-                context.endContainer = context.previousSelectionAnchor;
-                context.endOffset = context.endContainer.textContent.length;
-            } else {
-                context.startContainer = undefined;
-                context.startOffset = undefined;
-            }
-
-            context.previousSelectionAnchor = null;
+            // if (context.previousSelectionAnchor) {
+            //     context.endContainer = context.previousSelectionAnchor;
+            //     context.endOffset = context.endContainer.textContent.length;
+            // } else {
+            //     context.startContainer = undefined;
+            //     context.startOffset = undefined;
+            // }
+            // context.previousSelectionAnchor = null;
         }
 
         return [fragment, context];

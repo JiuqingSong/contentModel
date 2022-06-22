@@ -1,5 +1,6 @@
 import { areSameFormats, SelectionContext } from '../common/commonTypes';
 import { ContentModel_Segment, ContentModel_SegmentType } from './types/Segment';
+import { createRange } from 'roosterjs-editor-dom';
 import { ParagraphFormatHandlers, SegmentFormatHandlers } from '../common/formatHandlers';
 import {
     ContentModel_Block,
@@ -17,24 +18,45 @@ export default function createFragment(
     const fragment = doc.createDocumentFragment();
     const context: SelectionContext = {
         isInSelection: false,
-        previousSelectionAnchor: null,
+        lastElement: null,
     };
 
     createBlockFromContentModel(doc, fragment, model, context);
 
     if (context.startContainer && !context.endContainer) {
-        if (context.previousSelectionAnchor) {
-            context.endContainer = context.previousSelectionAnchor;
-            context.endOffset = context.endContainer.textContent.length;
+        if (context.lastElement) {
+            context.endContainer = context.lastElement.parentNode;
+            context.endOffset = context.lastElement.parentNode.childNodes.length;
         } else {
             context.startContainer = undefined;
             context.startOffset = undefined;
         }
 
-        context.previousSelectionAnchor = null;
+        context.lastElement = null;
     }
 
-    return [fragment, context];
+    const range =
+        context.startContainer && context.endContainer
+            ? createRange(
+                  context.startContainer,
+                  context.startOffset,
+                  context.endContainer,
+                  context.endOffset
+              )
+            : null;
+
+    fragment.normalize();
+
+    if (range) {
+        context.startContainer = range.startContainer;
+        context.endContainer = range.endContainer;
+        context.startOffset = range.startOffset;
+        context.endOffset = range.endOffset;
+
+        return [fragment, context];
+    } else {
+        return [fragment, null];
+    }
 }
 
 function createBlockFromContentModel(
@@ -87,40 +109,8 @@ function createParagraph(
 
     ParagraphFormatHandlers.forEach(handler => handler.writeBack(paragraph.format, div));
 
-    let previousSegment: ContentModel_Segment | null = null;
-    let previousSpan: HTMLElement | null = null;
-
     paragraph.segments.forEach(segment => {
-        let pendingStartContainer = false;
-
-        if (segment.isSelected && !context.isInSelection) {
-            context.isInSelection = true;
-            context.startOffset = previousSpan?.textContent.length || 0;
-            context.startContainer = previousSpan;
-            pendingStartContainer = true;
-        } else if (!segment.isSelected && context.isInSelection) {
-            context.isInSelection = false;
-            context.endContainer = context.previousSelectionAnchor;
-            context.endOffset = context.previousSelectionAnchor?.textContent.length || 0;
-        }
-
-        const newSpan = createSegmentFromContent(doc, div, segment, previousSegment, previousSpan);
-
-        previousSegment = segment;
-
-        if (pendingStartContainer) {
-            if (context.startContainer != newSpan) {
-                context.startOffset = 0;
-            }
-
-            context.startContainer = newSpan;
-        }
-
-        if (context.isInSelection) {
-            context.previousSelectionAnchor = newSpan;
-        }
-
-        previousSpan = newSpan;
+        createSegmentFromContent(doc, div, segment, context); //, previousSegment, previousSpan);
     });
 }
 
@@ -168,44 +158,46 @@ function createSegmentFromContent(
     doc: Document,
     parent: Node,
     segment: ContentModel_Segment,
-    previousSegment: ContentModel_Segment | null,
-    previousSpan: HTMLSpanElement | null
+    context: SelectionContext
 ) {
-    if (
-        previousSegment &&
-        previousSpan &&
-        previousSegment.type == ContentModel_SegmentType.Text &&
-        segment.type == ContentModel_SegmentType.Text &&
-        areSameFormats(segment.format, previousSegment.format)
-    ) {
-        previousSpan.textContent += segment.text;
-        return previousSpan;
-    } else {
-        let element: HTMLElement;
+    let element: HTMLElement;
 
-        switch (segment.type) {
-            case ContentModel_SegmentType.Image:
-                element = doc.createElement('img');
-                element.setAttribute('src', segment.src);
-                break;
-            case ContentModel_SegmentType.Text:
-                element = doc.createElement('span');
-                element.appendChild(doc.createTextNode(segment.text));
-                break;
+    switch (segment.type) {
+        case ContentModel_SegmentType.Image:
+            element = doc.createElement('img');
+            element.setAttribute('src', segment.src);
+            break;
+        case ContentModel_SegmentType.Text:
+            element = doc.createElement('span');
+            element.appendChild(doc.createTextNode(segment.text));
+            break;
 
-            case ContentModel_SegmentType.Br:
-                element = doc.createElement('br');
-                break;
+        case ContentModel_SegmentType.Br:
+            element = doc.createElement('br');
+            break;
+
+        case ContentModel_SegmentType.CollpasedSelection:
+            context.startContainer = context.endContainer = parent;
+            context.startOffset = context.endOffset = parent.childNodes.length;
+            break;
+    }
+
+    if (element) {
+        if (!context.isInSelection && segment.isSelected) {
+            context.isInSelection = true;
+            context.startContainer = parent;
+            context.startOffset = parent.childNodes.length;
+        } else if (context.isInSelection && !segment.isSelected) {
+            context.isInSelection = false;
+            context.endContainer = parent;
+            context.endOffset = parent.childNodes.length;
         }
 
-        if (element) {
-            parent.appendChild(element);
+        parent.appendChild(element);
+        context.lastElement = element;
 
-            SegmentFormatHandlers.forEach(handler => {
-                handler.writeBack(segment.format, element);
-            });
-        }
-
-        return element;
+        SegmentFormatHandlers.forEach(handler => {
+            handler.writeBack(segment.format, element);
+        });
     }
 }

@@ -78,13 +78,12 @@ export function containerProcessor(
     for (let child = parent.firstChild; child; child = child.nextSibling) {
         if (index == startOffset) {
             context.isInSelection = true;
-            const seg = addTextSegment(paragraph, context);
-            // seg.alwaysKeep = true;
+
+            collapsedSelectionProcessor(paragraph, context);
+            addTextSegment(paragraph, context);
         }
 
         if (index == endOffset) {
-            const seg = addTextSegment(paragraph, context);
-            // seg.alwaysKeep = true;
             context.isInSelection = false;
             addTextSegment(paragraph, context);
         }
@@ -116,16 +115,14 @@ export function containerProcessor(
                     textProcessor(paragraph, txt.substring(0, startOffset), context);
                     context.isInSelection = true;
 
-                    const seg = addTextSegment(paragraph, context);
-                    // seg.alwaysKeep = true;
+                    collapsedSelectionProcessor(paragraph, context);
 
+                    addTextSegment(paragraph, context);
                     txt = txt.substring(startOffset);
                     endOffset -= startOffset;
                 }
 
                 if (endOffset >= 0) {
-                    addTextSegment(paragraph, context);
-
                     textProcessor(paragraph, txt.substring(0, endOffset), context);
                     context.isInSelection = false;
 
@@ -259,8 +256,10 @@ const segmentProcessor: ElementProcessor = (group, context, element, defaultStyl
 };
 
 function textProcessor(paragraph: ContentModel_Paragraph, text: string, context: FormatContext) {
-    const textSegment = getOrAddTextSegment(paragraph, context);
-    textSegment.text += text;
+    if (text) {
+        const textSegment = getOrAddTextSegment(paragraph, context);
+        textSegment.text += text;
+    }
 
     // return lastBlock;
 
@@ -268,6 +267,19 @@ function textProcessor(paragraph: ContentModel_Paragraph, text: string, context:
     // } else if (lastSegment.text) {
     //     lastSegment.text += ' ';
     // }
+}
+
+function collapsedSelectionProcessor(paragraph: ContentModel_Paragraph, context: FormatContext) {
+    if (
+        context.startOffset == context.endOffset &&
+        context.startContainer == context.endContainer
+    ) {
+        paragraph.segments.push({
+            type: ContentModel_SegmentType.CollpasedSelection,
+            isSelected: true,
+            format: {},
+        });
+    }
 }
 
 function getOrAddParagraph(
