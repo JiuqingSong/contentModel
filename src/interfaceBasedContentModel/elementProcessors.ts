@@ -46,6 +46,7 @@ export interface FormatContext {
     segmentFormat: ContentModel_SegmentFormat;
     isInSelection: boolean;
 
+    isSelectionCollapsed?: boolean;
     startContainer?: Node;
     endContainer?: Node;
     startOffset?: number;
@@ -79,13 +80,22 @@ export function containerProcessor(
         if (index == startOffset) {
             context.isInSelection = true;
 
-            collapsedSelectionProcessor(paragraph, context);
-            addTextSegment(paragraph, context);
+            paragraph.segments.push({
+                type: ContentModel_SegmentType.SelectionMarker,
+                isSelected: true,
+                format: {},
+            });
         }
 
         if (index == endOffset) {
+            if (!context.isSelectionCollapsed) {
+                paragraph.segments.push({
+                    type: ContentModel_SegmentType.SelectionMarker,
+                    isSelected: true,
+                    format: {},
+                });
+            }
             context.isInSelection = false;
-            addTextSegment(paragraph, context);
         }
 
         switch (child.nodeType) {
@@ -115,18 +125,28 @@ export function containerProcessor(
                     textProcessor(paragraph, txt.substring(0, startOffset), context);
                     context.isInSelection = true;
 
-                    collapsedSelectionProcessor(paragraph, context);
+                    paragraph.segments.push({
+                        type: ContentModel_SegmentType.SelectionMarker,
+                        isSelected: true,
+                        format: {},
+                    });
 
-                    addTextSegment(paragraph, context);
                     txt = txt.substring(startOffset);
                     endOffset -= startOffset;
                 }
 
                 if (endOffset >= 0) {
                     textProcessor(paragraph, txt.substring(0, endOffset), context);
-                    context.isInSelection = false;
 
-                    addTextSegment(paragraph, context);
+                    if (!context.isSelectionCollapsed) {
+                        paragraph.segments.push({
+                            type: ContentModel_SegmentType.SelectionMarker,
+                            isSelected: true,
+                            format: {},
+                        });
+                    }
+
+                    context.isInSelection = false;
                     txt = txt.substring(endOffset);
                 }
 
@@ -267,19 +287,6 @@ function textProcessor(paragraph: ContentModel_Paragraph, text: string, context:
     // } else if (lastSegment.text) {
     //     lastSegment.text += ' ';
     // }
-}
-
-function collapsedSelectionProcessor(paragraph: ContentModel_Paragraph, context: FormatContext) {
-    if (
-        context.startOffset == context.endOffset &&
-        context.startContainer == context.endContainer
-    ) {
-        paragraph.segments.push({
-            type: ContentModel_SegmentType.CollpasedSelection,
-            isSelected: true,
-            format: {},
-        });
-    }
 }
 
 function getOrAddParagraph(

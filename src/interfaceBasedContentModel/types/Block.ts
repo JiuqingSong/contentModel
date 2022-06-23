@@ -20,6 +20,8 @@ export const enum ContentModel_BlockGroupType {
 
 export interface ContentModel_BlockBase<T extends ContentModel_BlockType> {
     blockType: T;
+
+    renderedNode?: Node;
 }
 
 export interface ContentModel_List extends ContentModel_BlockBase<ContentModel_BlockType.List> {

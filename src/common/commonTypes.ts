@@ -27,14 +27,14 @@ export interface ContentModel_ParagraphFormat {
     whiteSpace?: string;
 }
 
-export interface SelectionContext {
-    isInSelection: boolean;
-    lastElement: HTMLElement | null;
-    startContainer?: Node;
-    endContainer?: Node;
-    startOffset?: number;
-    endOffset?: number;
-}
+// export interface SelectionContext {
+//     isInSelection: boolean;
+//     lastParagraph: HTMLElement | null;
+//     startContainer?: Node;
+//     endContainer?: Node;
+//     startOffset?: number;
+//     endOffset?: number;
+// }
 
 const DummySegmentFormat: Required<ContentModel_SegmentFormat> = {
     bold: false,

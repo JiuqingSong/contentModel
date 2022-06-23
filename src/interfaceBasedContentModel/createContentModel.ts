@@ -40,6 +40,7 @@ function createFormatContext(range: Range | null): FormatContext {
         context.startOffset = range.startOffset;
         context.endContainer = range.endContainer;
         context.endOffset = range.endOffset;
+        context.isSelectionCollapsed = range.collapsed;
     }
 
     return context;

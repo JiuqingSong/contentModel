@@ -4,7 +4,7 @@ export const enum ContentModel_SegmentType {
     Text,
     Image,
     Br,
-    CollpasedSelection,
+    SelectionMarker,
     Entity,
 }
 
@@ -12,10 +12,12 @@ export interface ContentModel_SegmentBase<T extends ContentModel_SegmentType> {
     type: T;
     format: ContentModel_SegmentFormat;
     isSelected: boolean;
+
+    renderedNode?: Node;
 }
 
 export interface ContentModel_CollapsedSelection
-    extends ContentModel_SegmentBase<ContentModel_SegmentType.CollpasedSelection> {
+    extends ContentModel_SegmentBase<ContentModel_SegmentType.SelectionMarker> {
     isSelected: true;
 }
 

@@ -1,12 +1,10 @@
-import createClassBasedContentModel from './classBasedContentModel/createContentModel';
 import createFragment from './interfaceBasedContentModel/createFragment';
 import createInterfaceBasedContentModel from './interfaceBasedContentModel/createContentModel';
 import getSelectedSegments from './interfaceBasedContentModel/getSelectedSegments';
-import perfTest from './perfTest';
 import { ContentModel_Document } from './interfaceBasedContentModel/types/Block';
 import { Editor } from 'roosterjs-editor-core';
 import { IEditor } from 'roosterjs-editor-types';
-// import { ContentModel_Document } from './classBasedContentModel/ContentModel';
+// import perfTest from './perfTest';
 
 const sourceEl = document.getElementById('source') as HTMLTextAreaElement;
 const layoutEl = document.getElementById('layout') as HTMLDivElement;
@@ -26,7 +24,7 @@ sourceEl.addEventListener('input', updateLayout);
 btnBold.addEventListener('click', bold);
 btnItalic.addEventListener('click', italic);
 btnUnderline.addEventListener('click', underline);
-btnPerf.addEventListener('click', perfTest);
+// btnPerf.addEventListener('click', perfTest);
 
 document.addEventListener('selectionchange', () => {
     updateContentModel(modelLayoutEl);
@@ -54,19 +52,19 @@ function updateContentModel(source: Node) {
 function updateResult(model: ContentModel_Document, updateSelection: boolean) {
     modelLayoutEl.innerHTML = '';
 
-    const [fragment, context] = createFragment(document, model);
+    const [fragment /*, context*/] = createFragment(document, model);
     modelLayoutEl.appendChild(fragment);
     modelHtmlEl.value = modelLayoutEl.innerHTML;
 
-    if (updateSelection && context) {
-        editor.focus();
-        editor.select(
-            context.startContainer,
-            context.startOffset,
-            context.endContainer,
-            context.endOffset
-        );
-    }
+    // if (updateSelection && context) {
+    //     editor.focus();
+    //     editor.select(
+    //         context.startContainer,
+    //         context.startOffset,
+    //         context.endContainer,
+    //         context.endOffset
+    //     );
+    // }
 }
 
 function bold() {
