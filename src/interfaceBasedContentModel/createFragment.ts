@@ -1,5 +1,4 @@
 import { ContentModel_Segment, ContentModel_SegmentType } from './types/Segment';
-import { createRange } from 'roosterjs-editor-dom';
 import { ParagraphFormatHandlers, SegmentFormatHandlers } from '../common/formatHandlers';
 // import { areSameFormats /*, SelectionContext*/ } from '../common/commonTypes';
 import {

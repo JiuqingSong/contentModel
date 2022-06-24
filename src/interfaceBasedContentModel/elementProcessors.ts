@@ -2,7 +2,6 @@ import { ContentModel_Image, ContentModel_SegmentType, ContentModel_Text } from 
 import { ContentModel_ParagraphFormat, ContentModel_SegmentFormat } from '../common/commonTypes';
 import { DefaultFormatParserType } from '../common/defaultStyles';
 import { ParagraphFormatHandlers, SegmentFormatHandlers } from '../common/formatHandlers';
-import { toArray } from 'roosterjs-editor-dom';
 import {
     ContentModel_BlockGroup,
     ContentModel_Table,
@@ -180,7 +179,7 @@ export const tableProcessor: ElementProcessor = (group, context, element) => {
     const tableElement = element as HTMLTableElement;
     const table: ContentModel_Table = {
         blockType: ContentModel_BlockType.Table,
-        cells: toArray(tableElement.rows).map(_ => []),
+        cells: Array.from(tableElement.rows).map(_ => []),
     };
 
     group.blocks.push(table);

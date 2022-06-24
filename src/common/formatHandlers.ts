@@ -1,5 +1,5 @@
+import wrap from '../utils/wrap';
 import { ContentModel_ParagraphFormat, ContentModel_SegmentFormat } from './commonTypes';
-import { wrap } from 'roosterjs-editor-dom';
 
 export interface FormatHandlerBase<
     TFormat extends ContentModel_ParagraphFormat | ContentModel_SegmentFormat

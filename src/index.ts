@@ -2,16 +2,12 @@ import createFragment from './interfaceBasedContentModel/createFragment';
 import createInterfaceBasedContentModel from './interfaceBasedContentModel/createContentModel';
 import getSelectedSegments from './interfaceBasedContentModel/getSelectedSegments';
 import { ContentModel_Document } from './interfaceBasedContentModel/types/Block';
-import { Editor } from 'roosterjs-editor-core';
-import { IEditor } from 'roosterjs-editor-types';
-// import perfTest from './perfTest';
 
 const sourceEl = document.getElementById('source') as HTMLTextAreaElement;
 const layoutEl = document.getElementById('layout') as HTMLDivElement;
 const modelEl = document.getElementById('model') as HTMLTextAreaElement;
 const modelHtmlEl = document.getElementById('modelHTML') as HTMLTextAreaElement;
 const modelLayoutEl = document.getElementById('modelLayout') as HTMLDivElement;
-const editor: IEditor = new Editor(modelLayoutEl);
 
 const btnBold = document.getElementById('btnBold') as HTMLButtonElement;
 const btnItalic = document.getElementById('btnItalic') as HTMLButtonElement;
@@ -40,10 +36,10 @@ function updateLayout() {
 }
 
 function updateContentModel(source: Node) {
-    const model = createInterfaceBasedContentModel(
-        source,
-        source == modelLayoutEl ? editor.getSelectionRange() : null
-    );
+    const selection = window.getSelection();
+    const range = selection.rangeCount > 0 ? selection.getRangeAt(0) : null;
+
+    const model = createInterfaceBasedContentModel(source, source == modelLayoutEl ? range : null);
     modelEl.value = JSON.stringify(model, null, 4);
 
     return model;
