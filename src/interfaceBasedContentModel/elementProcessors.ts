@@ -1,3 +1,4 @@
+import isNodeOfType, { NodeType } from '../utils/isNodeOfType';
 import { ContentModel_Image, ContentModel_SegmentType, ContentModel_Text } from './types/Segment';
 import { ContentModel_ParagraphFormat, ContentModel_SegmentFormat } from '../common/commonTypes';
 import { DefaultFormatParserType } from '../common/defaultStyles';
@@ -71,12 +72,12 @@ export function containerProcessor(
 ) {
     const paragraph = getOrAddParagraph(group, context);
 
-    let startOffset = context.startContainer == parent ? context.startOffset : -1;
-    let endOffset = context.endContainer == parent ? context.endOffset : -1;
+    let nodeStartOffset = context.startContainer == parent ? context.startOffset : -1;
+    let nodeEndOffset = context.endContainer == parent ? context.endOffset : -1;
     let index = 0;
 
     for (let child = parent.firstChild; child; child = child.nextSibling) {
-        if (index == startOffset) {
+        if (index == nodeStartOffset) {
             context.isInSelection = true;
 
             paragraph.segments.push({
@@ -86,7 +87,7 @@ export function containerProcessor(
             });
         }
 
-        if (index == endOffset) {
+        if (index == nodeEndOffset) {
             if (!context.isSelectionCollapsed) {
                 paragraph.segments.push({
                     type: ContentModel_SegmentType.SelectionMarker,
@@ -97,60 +98,54 @@ export function containerProcessor(
             context.isInSelection = false;
         }
 
-        switch (child.nodeType) {
-            case Node.ELEMENT_NODE:
-                const element = child as HTMLElement;
-                const handler = context.tagHandlers[element.tagName];
-                const processor = handler?.processor || generalProcessor;
-                const format = handler
-                    ? typeof handler.style === 'function'
-                        ? handler.style(element)
-                        : handler.style
-                    : {};
+        if (isNodeOfType(child, NodeType.Element)) {
+            const handler = context.tagHandlers[child.tagName];
+            const processor = handler?.processor || generalProcessor;
+            const format = handler
+                ? typeof handler.style === 'function'
+                    ? handler.style(child)
+                    : handler.style
+                : {};
 
-                processor(group, context, element, format || {});
+            processor(group, context, child, format || {});
+        } else if (isNodeOfType(child, NodeType.Text)) {
+            const textNode = child as Text;
+            const paragraph = getOrAddParagraph(group, context);
 
-                break;
+            let txt = textNode.nodeValue;
+            let txtStartOffset = context.startContainer == textNode ? context.startOffset : -1;
+            let txtEndOffset = context.endContainer == textNode ? context.endOffset : -1;
 
-            case Node.TEXT_NODE:
-                const textNode = child as Text;
-                const paragraph = getOrAddParagraph(group, context);
+            if (txtStartOffset >= 0) {
+                textProcessor(paragraph, txt.substring(0, txtStartOffset), context);
+                context.isInSelection = true;
 
-                let txt = textNode.nodeValue;
-                startOffset = context.startContainer == textNode ? context.startOffset : -1;
-                endOffset = context.endContainer == textNode ? context.endOffset : -1;
+                paragraph.segments.push({
+                    type: ContentModel_SegmentType.SelectionMarker,
+                    isSelected: true,
+                    format: context.segmentFormat,
+                });
 
-                if (startOffset >= 0) {
-                    textProcessor(paragraph, txt.substring(0, startOffset), context);
-                    context.isInSelection = true;
+                txt = txt.substring(txtStartOffset);
+                txtEndOffset -= txtStartOffset;
+            }
 
+            if (txtEndOffset >= 0) {
+                textProcessor(paragraph, txt.substring(0, txtEndOffset), context);
+
+                if (!context.isSelectionCollapsed) {
                     paragraph.segments.push({
                         type: ContentModel_SegmentType.SelectionMarker,
                         isSelected: true,
                         format: context.segmentFormat,
                     });
-
-                    txt = txt.substring(startOffset);
-                    endOffset -= startOffset;
                 }
 
-                if (endOffset >= 0) {
-                    textProcessor(paragraph, txt.substring(0, endOffset), context);
+                context.isInSelection = false;
+                txt = txt.substring(txtEndOffset);
+            }
 
-                    if (!context.isSelectionCollapsed) {
-                        paragraph.segments.push({
-                            type: ContentModel_SegmentType.SelectionMarker,
-                            isSelected: true,
-                            format: context.segmentFormat,
-                        });
-                    }
-
-                    context.isInSelection = false;
-                    txt = txt.substring(endOffset);
-                }
-
-                textProcessor(paragraph, txt, context);
-                break;
+            textProcessor(paragraph, txt, context);
         }
 
         index++;

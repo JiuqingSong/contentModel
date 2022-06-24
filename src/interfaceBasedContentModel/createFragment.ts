@@ -1,3 +1,4 @@
+import isNodeOfType, { NodeType } from '../utils/isNodeOfType';
 import { ContentModel_Segment, ContentModel_SegmentType } from './types/Segment';
 import { ParagraphFormatHandlers, SegmentFormatHandlers } from '../common/formatHandlers';
 import { SelectionContext, SelectionInfo, SelectionPosition } from '../common/commonTypes';
@@ -28,7 +29,7 @@ export default function createFragment(
         info.end = getSelectionPosition(info.context);
     }
 
-    // fragment.normalize();
+    optimize(fragment);
 
     return [fragment, info.start, info.end];
 }
@@ -181,7 +182,7 @@ function getSelectionPosition(context: SelectionContext): SelectionPosition | nu
             container: context.currentBlockNode,
             offset: 0,
         };
-    } else if (context.currentSegmentNode.nodeType == Node.TEXT_NODE) {
+    } else if (isNodeOfType(context.currentSegmentNode, NodeType.Text)) {
         return {
             container: context.currentSegmentNode,
             offset: context.currentSegmentNode.nodeValue.length,
@@ -205,4 +206,50 @@ function indexOf(node: Node): number {
     }
 
     return index;
+}
+
+const OptimizeTags = ['SPAN', 'B', 'I', 'U', 'SUB', 'SUP', 'STRIKE'];
+
+function optimize(root: Node) {
+    for (let child = root.firstChild; child; ) {
+        const next = child.nextSibling;
+
+        if (
+            next &&
+            isNodeOfType(child, NodeType.Element) &&
+            isNodeOfType(next, NodeType.Element) &&
+            child.tagName == next.tagName &&
+            OptimizeTags.indexOf(child.tagName) >= 0 &&
+            hasSameAttributes(child, next)
+        ) {
+            while (next.firstChild) {
+                child.appendChild(next.firstChild);
+            }
+
+            next.parentNode.removeChild(next);
+        } else {
+            child = next;
+        }
+    }
+
+    for (let child = root.firstChild; child; child = child.nextSibling) {
+        optimize(child);
+    }
+}
+
+function hasSameAttributes(element1: HTMLElement, element2: HTMLElement) {
+    const attr1 = element1.attributes;
+    const attr2 = element2.attributes;
+
+    if (attr1.length != attr2.length) {
+        return false;
+    }
+
+    for (let i = 0; i < attr1.length; i++) {
+        if (attr1[i].name != attr2[i].name || attr1[i].value != attr2[i].value) {
+            return false;
+        }
+    }
+
+    return true;
 }

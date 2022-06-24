@@ -60,8 +60,11 @@ function updateResult(model: ContentModel_Document, updateSelection: boolean) {
         const range = document.createRange();
         range.setStart(start.container, start.offset);
         range.setEnd(end.container, end.offset);
+
         addRangeToSelection(range);
     }
+
+    modelHtmlEl.normalize();
 }
 
 function bold() {

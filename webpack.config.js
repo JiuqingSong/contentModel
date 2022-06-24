@@ -14,7 +14,7 @@ module.exports = {
         extensions: ['.ts', '.js'],
         modules: ['./src', './node_modules'],
     },
-    mode: 'production',
+    mode: 'development',
     module: {
         rules: [
             {
@@ -24,7 +24,7 @@ module.exports = {
         ],
     },
     optimization: {
-        minimize: true,
+        minimize: false,
     },
     watch: true,
     stats: 'minimal',
