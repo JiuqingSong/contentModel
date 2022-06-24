@@ -27,14 +27,21 @@ export interface ContentModel_ParagraphFormat {
     whiteSpace?: string;
 }
 
-// export interface SelectionContext {
-//     isInSelection: boolean;
-//     lastParagraph: HTMLElement | null;
-//     startContainer?: Node;
-//     endContainer?: Node;
-//     startOffset?: number;
-//     endOffset?: number;
-// }
+export interface SelectionPosition {
+    container: Node;
+    offset: number;
+}
+
+export interface SelectionContext {
+    currentBlockNode: HTMLElement | null;
+    currentSegmentNode: Node | null;
+}
+
+export interface SelectionInfo {
+    start?: SelectionPosition;
+    end?: SelectionPosition;
+    context: SelectionContext;
+}
 
 const DummySegmentFormat: Required<ContentModel_SegmentFormat> = {
     bold: false,

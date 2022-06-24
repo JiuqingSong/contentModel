@@ -82,7 +82,7 @@ export function containerProcessor(
             paragraph.segments.push({
                 type: ContentModel_SegmentType.SelectionMarker,
                 isSelected: true,
-                format: {},
+                format: context.segmentFormat,
             });
         }
 
@@ -91,7 +91,7 @@ export function containerProcessor(
                 paragraph.segments.push({
                     type: ContentModel_SegmentType.SelectionMarker,
                     isSelected: true,
-                    format: {},
+                    format: context.segmentFormat,
                 });
             }
             context.isInSelection = false;
@@ -127,7 +127,7 @@ export function containerProcessor(
                     paragraph.segments.push({
                         type: ContentModel_SegmentType.SelectionMarker,
                         isSelected: true,
-                        format: {},
+                        format: context.segmentFormat,
                     });
 
                     txt = txt.substring(startOffset);
@@ -141,7 +141,7 @@ export function containerProcessor(
                         paragraph.segments.push({
                             type: ContentModel_SegmentType.SelectionMarker,
                             isSelected: true,
-                            format: {},
+                            format: context.segmentFormat,
                         });
                     }
 

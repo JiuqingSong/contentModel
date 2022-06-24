@@ -12,8 +12,6 @@ export interface ContentModel_SegmentBase<T extends ContentModel_SegmentType> {
     type: T;
     format: ContentModel_SegmentFormat;
     isSelected: boolean;
-
-    renderedNode?: Node;
 }
 
 export interface ContentModel_CollapsedSelection

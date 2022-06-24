@@ -1,6 +1,6 @@
 import { ContentModel_Segment, ContentModel_SegmentType } from './types/Segment';
 import { ParagraphFormatHandlers, SegmentFormatHandlers } from '../common/formatHandlers';
-// import { areSameFormats /*, SelectionContext*/ } from '../common/commonTypes';
+import { SelectionContext, SelectionInfo, SelectionPosition } from '../common/commonTypes';
 import {
     ContentModel_Block,
     ContentModel_BlockGroupType,
@@ -13,64 +13,38 @@ import {
 export default function createFragment(
     doc: Document,
     model: ContentModel_Document
-): [DocumentFragment /*, SelectionContext*/] {
+): [DocumentFragment, SelectionPosition, SelectionPosition] {
     const fragment = doc.createDocumentFragment();
-    // const context: SelectionContext = {
-    //     isInSelection: false,
-    //     lastParagraph: null,
-    // };
+    const info: SelectionInfo = {
+        context: {
+            currentBlockNode: null,
+            currentSegmentNode: null,
+        },
+    };
 
-    createBlockFromContentModel(doc, fragment, model);
+    createBlockFromContentModel(doc, fragment, model, info);
 
-    // if (context.startContainer && !context.endContainer) {
-    //     if (context.lastParagraph) {
-    //         context.endContainer = context.lastParagraph;
-    //         context.endOffset = context.lastParagraph.childNodes.length;
-    //     } else {
-    //         context.startContainer = undefined;
-    //         context.startOffset = undefined;
-    //     }
+    if (info.start && !info.end) {
+        info.end = getSelectionPosition(info.context);
+    }
 
-    //     context.lastParagraph = null;
-    // }
+    // fragment.normalize();
 
-    // const range =
-    //     context.startContainer && context.endContainer
-    //         ? createRange(
-    //               context.startContainer,
-    //               context.startOffset,
-    //               context.endContainer,
-    //               context.endOffset
-    //           )
-    //         : null;
-
-    fragment.normalize();
-
-    return [fragment];
-    // if (range) {
-    //     context.startContainer = range.startContainer;
-    //     context.endContainer = range.endContainer;
-    //     context.startOffset = range.startOffset;
-    //     context.endOffset = range.endOffset;
-
-    //     return [fragment, context];
-    // } else {
-    //     return [fragment, null];
-    // }
+    return [fragment, info.start, info.end];
 }
 
 function createBlockFromContentModel(
     doc: Document,
     parent: Node,
-    block: ContentModel_Block
-    // context: SelectionContext
+    block: ContentModel_Block,
+    info: SelectionInfo
 ) {
     switch (block.blockType) {
         case ContentModel_BlockType.List:
             break;
 
         case ContentModel_BlockType.Table:
-            createTable(doc, parent, block /*, context */);
+            createTable(doc, parent, block, info);
             break;
 
         case ContentModel_BlockType.BlockGroup:
@@ -88,12 +62,12 @@ function createBlockFromContentModel(
             }
 
             block.blocks.forEach(childBlock =>
-                createBlockFromContentModel(doc, newParent, childBlock /*, context*/)
+                createBlockFromContentModel(doc, newParent, childBlock, info)
             );
 
             break;
         case ContentModel_BlockType.Paragraph:
-            createParagraph(doc, parent, block /*, context*/);
+            createParagraph(doc, parent, block, info);
             break;
     }
 }
@@ -101,30 +75,28 @@ function createBlockFromContentModel(
 function createParagraph(
     doc: Document,
     parent: Node,
-    paragraph: ContentModel_Paragraph
-    // context: SelectionContext
+    paragraph: ContentModel_Paragraph,
+    info: SelectionInfo
 ) {
     const div = doc.createElement('div');
     parent.appendChild(div);
-    paragraph.renderedNode = div;
+    setCurrentBlockElement(info.context, div);
 
     ParagraphFormatHandlers.forEach(handler => handler.writeBack(paragraph.format, div));
 
-    //     context.lastParagraph = div;
     paragraph.segments.forEach(segment => {
-        createSegmentFromContent(doc, div, segment /*, context*/); //, previousSegment, previousSpan);
+        createSegmentFromContent(doc, div, segment, info);
     });
 }
 
-function createTable(
-    doc: Document,
-    parent: Node,
-    table: ContentModel_Table
-    //    context: SelectionContext
-) {
+function setCurrentBlockElement(context: SelectionContext, element: HTMLElement) {
+    context.currentBlockNode = element;
+    context.currentSegmentNode = null;
+}
+
+function createTable(doc: Document, parent: Node, table: ContentModel_Table, info: SelectionInfo) {
     const tableNode = doc.createElement('table');
     parent.appendChild(tableNode);
-    table.renderedNode = tableNode;
 
     for (let row = 0; row < table.cells.length; row++) {
         const tr = doc.createElement('tr');
@@ -135,7 +107,6 @@ function createTable(
 
             if (!cell.spanAbove && !cell.spanLeft) {
                 const td = doc.createElement('td');
-                cell.renderedNode = td;
                 tr.appendChild(td);
 
                 let rowSpan = 1;
@@ -152,7 +123,7 @@ function createTable(
                     td.colSpan = colSpan;
                 }
 
-                createBlockFromContentModel(doc, td, cell /*, context*/);
+                createBlockFromContentModel(doc, td, cell, info);
             }
         }
     }
@@ -161,46 +132,37 @@ function createTable(
 function createSegmentFromContent(
     doc: Document,
     parent: Node,
-    segment: ContentModel_Segment
-    //    context: SelectionContext
+    segment: ContentModel_Segment,
+    info: SelectionInfo
 ) {
+    if (info.start && !info.end && !segment.isSelected) {
+        info.end = getSelectionPosition(info.context);
+    }
+
     let element: HTMLElement;
 
     switch (segment.type) {
         case ContentModel_SegmentType.Image:
             element = doc.createElement('img');
-            segment.renderedNode = element;
             element.setAttribute('src', segment.src);
+            info.context.currentSegmentNode = element;
             break;
         case ContentModel_SegmentType.Text:
             const txt = doc.createTextNode(segment.text);
-            segment.renderedNode = txt;
             element = doc.createElement('span');
             element.appendChild(txt);
+            info.context.currentSegmentNode = txt;
             break;
 
         case ContentModel_SegmentType.Br:
             element = doc.createElement('br');
-            segment.renderedNode = element;
+            info.context.currentSegmentNode = element;
             break;
-
-        // case ContentModel_SegmentType.SelectionMarker:
-        //     context.startContainer = context.endContainer = parent;
-        //     context.startOffset = context.endOffset = parent.childNodes.length;
-        //     break;
     }
 
-    // if (!context.isInSelection && segment.isSelected) {
-    //     context.isInSelection = true;
-    //     context.startContainer = parent;
-    //     context.startOffset = parent.childNodes.length;
-    // }
-
-    // if (context.isInSelection && !segment.isSelected) {
-    //     context.isInSelection = false;
-    //     context.endContainer = parent;
-    //     context.endOffset = parent.childNodes.length;
-    // }
+    if (!info.start && segment.isSelected) {
+        info.start = getSelectionPosition(info.context);
+    }
 
     if (element) {
         parent.appendChild(element);
@@ -209,4 +171,38 @@ function createSegmentFromContent(
             handler.writeBack(segment.format, element);
         });
     }
+}
+
+function getSelectionPosition(context: SelectionContext): SelectionPosition | null {
+    if (!context.currentBlockNode) {
+        return null;
+    } else if (!context.currentSegmentNode) {
+        return {
+            container: context.currentBlockNode,
+            offset: 0,
+        };
+    } else if (context.currentSegmentNode.nodeType == Node.TEXT_NODE) {
+        return {
+            container: context.currentSegmentNode,
+            offset: context.currentSegmentNode.nodeValue.length,
+        };
+    } else {
+        return {
+            container: context.currentSegmentNode.parentNode,
+            offset: indexOf(context.currentSegmentNode) + 1,
+        };
+    }
+}
+
+function indexOf(node: Node): number {
+    let index = 0;
+    for (
+        let child = node.parentNode.firstChild;
+        child && child != node;
+        child = child.nextSibling
+    ) {
+        index++;
+    }
+
+    return index;
 }

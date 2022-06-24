@@ -1,7 +1,9 @@
+import addRangeToSelection from './utils/addRangeToSelection';
 import createFragment from './interfaceBasedContentModel/createFragment';
 import createInterfaceBasedContentModel from './interfaceBasedContentModel/createContentModel';
 import getSelectedSegments from './interfaceBasedContentModel/getSelectedSegments';
 import { ContentModel_Document } from './interfaceBasedContentModel/types/Block';
+import { ContentModel_SegmentType } from './interfaceBasedContentModel/types/Segment';
 
 const sourceEl = document.getElementById('source') as HTMLTextAreaElement;
 const layoutEl = document.getElementById('layout') as HTMLDivElement;
@@ -48,26 +50,27 @@ function updateContentModel(source: Node) {
 function updateResult(model: ContentModel_Document, updateSelection: boolean) {
     modelLayoutEl.innerHTML = '';
 
-    const [fragment /*, context*/] = createFragment(document, model);
+    const [fragment, start, end] = createFragment(document, model);
     modelLayoutEl.appendChild(fragment);
     modelHtmlEl.value = modelLayoutEl.innerHTML;
 
-    // if (updateSelection && context) {
-    //     editor.focus();
-    //     editor.select(
-    //         context.startContainer,
-    //         context.startOffset,
-    //         context.endContainer,
-    //         context.endOffset
-    //     );
-    // }
+    if (updateSelection && start && end) {
+        modelHtmlEl.focus();
+
+        const range = document.createRange();
+        range.setStart(start.container, start.offset);
+        range.setEnd(end.container, end.offset);
+        addRangeToSelection(range);
+    }
 }
 
 function bold() {
     const model = updateContentModel(modelLayoutEl);
     const segments = getSelectedSegments(model);
     // const segments = model.getSelectedSegments();
-    const toUnbold = segments.every(seg => seg.format.bold);
+    const toUnbold = segments.every(
+        seg => seg.type == ContentModel_SegmentType.SelectionMarker || seg.format.bold
+    );
 
     segments.forEach(seg => (seg.format.bold = !toUnbold));
 
@@ -78,7 +81,9 @@ function italic() {
     const model = updateContentModel(modelLayoutEl);
     const segments = getSelectedSegments(model);
     // const segments = model.getSelectedSegments();
-    const toUnitalic = segments.every(seg => seg.format.italic);
+    const toUnitalic = segments.every(
+        seg => seg.type == ContentModel_SegmentType.SelectionMarker || seg.format.italic
+    );
 
     segments.forEach(seg => (seg.format.italic = !toUnitalic));
 
@@ -89,7 +94,9 @@ function underline() {
     const model = updateContentModel(modelLayoutEl);
     const segments = getSelectedSegments(model);
     // const segments = model.getSelectedSegments();
-    const toUnunderline = segments.every(seg => seg.format.underline);
+    const toUnunderline = segments.every(
+        seg => seg.type == ContentModel_SegmentType.SelectionMarker || seg.format.underline
+    );
     segments.forEach(seg => (seg.format.underline = !toUnunderline));
     updateResult(model, true);
 }
