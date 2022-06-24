@@ -14,7 +14,7 @@ export interface ContentModel_SegmentBase<T extends ContentModel_SegmentType> {
     isSelected: boolean;
 }
 
-export interface ContentModel_CollapsedSelection
+export interface ContentModel_SelectionMarker
     extends ContentModel_SegmentBase<ContentModel_SegmentType.SelectionMarker> {
     isSelected: true;
 }
@@ -35,7 +35,7 @@ export interface ContentModel_Entity
     extends ContentModel_SegmentBase<ContentModel_SegmentType.Entity> {}
 
 export type ContentModel_Segment =
-    | ContentModel_CollapsedSelection
+    | ContentModel_SelectionMarker
     | ContentModel_Text
     | ContentModel_Image
     | ContentModel_Entity

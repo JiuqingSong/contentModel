@@ -1,15 +1,26 @@
 import isNodeOfType, { NodeType } from '../utils/isNodeOfType';
-import { ContentModel_Image, ContentModel_SegmentType, ContentModel_Text } from './types/Segment';
-import { ContentModel_ParagraphFormat, ContentModel_SegmentFormat } from '../common/commonTypes';
+import { ContentModel_Segment, ContentModel_SegmentType } from './types/Segment';
 import { DefaultFormatParserType } from '../common/defaultStyles';
 import { ParagraphFormatHandlers, SegmentFormatHandlers } from '../common/formatHandlers';
 import {
+    createBr,
+    createImage,
+    createParagraph,
+    createSelectionMarker,
+    createTable,
+    createTableCell,
+    createText,
+} from './creators';
+import {
+    areSameFormats,
+    ContentModel_ParagraphFormat,
+    ContentModel_SegmentFormat,
+} from '../common/commonTypes';
+import {
     ContentModel_BlockGroup,
-    ContentModel_Table,
     ContentModel_BlockType,
     ContentModel_Paragraph,
-    ContentModel_TableCell,
-    ContentModel_BlockGroupType,
+    ContentModel_Block,
 } from './types/Block';
 
 // https://www.w3schools.com/cssref/pr_class_display.asp
@@ -70,8 +81,6 @@ export function containerProcessor(
     parent: Node,
     context: FormatContext
 ) {
-    const paragraph = getOrAddParagraph(group, context);
-
     let nodeStartOffset = context.startContainer == parent ? context.startOffset : -1;
     let nodeEndOffset = context.endContainer == parent ? context.endOffset : -1;
     let index = 0;
@@ -80,20 +89,12 @@ export function containerProcessor(
         if (index == nodeStartOffset) {
             context.isInSelection = true;
 
-            paragraph.segments.push({
-                type: ContentModel_SegmentType.SelectionMarker,
-                isSelected: true,
-                format: context.segmentFormat,
-            });
+            addSegment(group, context, createSelectionMarker(context));
         }
 
         if (index == nodeEndOffset) {
             if (!context.isSelectionCollapsed) {
-                paragraph.segments.push({
-                    type: ContentModel_SegmentType.SelectionMarker,
-                    isSelected: true,
-                    format: context.segmentFormat,
-                });
+                addSegment(group, context, createSelectionMarker(context));
             }
             context.isInSelection = false;
         }
@@ -110,42 +111,33 @@ export function containerProcessor(
             processor(group, context, child, format || {});
         } else if (isNodeOfType(child, NodeType.Text)) {
             const textNode = child as Text;
-            const paragraph = getOrAddParagraph(group, context);
 
             let txt = textNode.nodeValue;
             let txtStartOffset = context.startContainer == textNode ? context.startOffset : -1;
             let txtEndOffset = context.endContainer == textNode ? context.endOffset : -1;
 
             if (txtStartOffset >= 0) {
-                textProcessor(paragraph, txt.substring(0, txtStartOffset), context);
+                textProcessor(group, txt.substring(0, txtStartOffset), context);
                 context.isInSelection = true;
 
-                paragraph.segments.push({
-                    type: ContentModel_SegmentType.SelectionMarker,
-                    isSelected: true,
-                    format: context.segmentFormat,
-                });
+                addSegment(group, context, createSelectionMarker(context));
 
                 txt = txt.substring(txtStartOffset);
                 txtEndOffset -= txtStartOffset;
             }
 
             if (txtEndOffset >= 0) {
-                textProcessor(paragraph, txt.substring(0, txtEndOffset), context);
+                textProcessor(group, txt.substring(0, txtEndOffset), context);
 
                 if (!context.isSelectionCollapsed) {
-                    paragraph.segments.push({
-                        type: ContentModel_SegmentType.SelectionMarker,
-                        isSelected: true,
-                        format: context.segmentFormat,
-                    });
+                    addSegment(group, context, createSelectionMarker(context));
                 }
 
                 context.isInSelection = false;
                 txt = txt.substring(txtEndOffset);
             }
 
-            textProcessor(paragraph, txt, context);
+            textProcessor(group, txt, context);
         }
 
         index++;
@@ -162,22 +154,14 @@ export const generalProcessor: ElementProcessor = (group, context, element, defa
 };
 
 export const brProcessor: ElementProcessor = (group, context) => {
-    const paragraph = getOrAddParagraph(group, context);
-    paragraph.segments.push({
-        type: ContentModel_SegmentType.Br,
-        format: {},
-        isSelected: context.isInSelection,
-    });
+    addSegment(group, context, createBr(context));
 };
 
 export const tableProcessor: ElementProcessor = (group, context, element) => {
     const tableElement = element as HTMLTableElement;
-    const table: ContentModel_Table = {
-        blockType: ContentModel_BlockType.Table,
-        cells: Array.from(tableElement.rows).map(_ => []),
-    };
+    const table = createTable(context, tableElement);
 
-    group.blocks.push(table);
+    addBlock(group, table);
 
     for (let row = 0; row < tableElement.rows.length; row++) {
         const tr = tableElement.rows[row];
@@ -189,14 +173,7 @@ export const tableProcessor: ElementProcessor = (group, context, element) => {
             for (let colSpan = 0; colSpan < td.colSpan; colSpan++, targetCol++) {
                 for (let rowSpan = 0; rowSpan < td.rowSpan; rowSpan++) {
                     const hasTd = colSpan + rowSpan == 0;
-                    const cell: ContentModel_TableCell = {
-                        blockGroupType: ContentModel_BlockGroupType.TableCell,
-                        blockType: ContentModel_BlockType.BlockGroup,
-                        blocks: [],
-                        // td: hasTd ? td : null,
-                        spanLeft: colSpan > 0,
-                        spanAbove: rowSpan > 0,
-                    };
+                    const cell = createTableCell(context, colSpan, rowSpan);
 
                     table.cells[row + rowSpan][targetCol] = cell;
 
@@ -211,21 +188,17 @@ export const tableProcessor: ElementProcessor = (group, context, element) => {
 
 export const imageProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
     const imageElement = element as HTMLImageElement;
-    const segmentFormat = { ...context.segmentFormat };
+
+    const originalSegmentFormat = context.segmentFormat;
+    context.segmentFormat = { ...originalSegmentFormat };
 
     SegmentFormatHandlers.forEach(handler =>
-        handler.parse(segmentFormat, imageElement, defaultStyle)
+        handler.parse(context.segmentFormat, imageElement, defaultStyle)
     );
 
-    const image: ContentModel_Image = {
-        type: ContentModel_SegmentType.Image,
-        format: segmentFormat,
-        src: imageElement.src,
-        isSelected: context.isInSelection,
-    };
+    addSegment(group, context, createImage(context, imageElement));
 
-    let paragraph = getOrAddParagraph(group, context);
-    paragraph.segments.push(image);
+    context.segmentFormat = originalSegmentFormat;
 };
 
 const blockProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
@@ -244,12 +217,13 @@ const blockProcessor: ElementProcessor = (group, context, element, defaultStyle)
         handler.parse(context.segmentFormat, element, defaultStyle)
     );
 
-    addParagraph(group, context);
+    addBlock(group, createParagraph(context));
+
     containerProcessor(group, element, context);
     context.blockFormat = originalBlockFormat;
     context.segmentFormat = originalSegmentFormat;
 
-    addParagraph(group, context);
+    addBlock(group, createParagraph(context));
 };
 
 const segmentProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
@@ -260,81 +234,68 @@ const segmentProcessor: ElementProcessor = (group, context, element, defaultStyl
         handler.parse(context.segmentFormat, element, defaultStyle)
     );
 
-    let paragraph = getOrAddParagraph(group, context);
-    addTextSegment(paragraph, context);
     containerProcessor(group, element, context);
 
-    paragraph = getOrAddParagraph(group, context);
     context.segmentFormat = originalSegmentFormat;
-    addTextSegment(paragraph, context);
 };
 
-function textProcessor(paragraph: ContentModel_Paragraph, text: string, context: FormatContext) {
+function textProcessor(group: ContentModel_BlockGroup, text: string, context: FormatContext) {
     if (text) {
-        const textSegment = getOrAddTextSegment(paragraph, context);
-        textSegment.text += text;
+        const paragraph = group.blocks[group.blocks.length - 1];
+        const lastSegment =
+            paragraph?.blockType == ContentModel_BlockType.Paragraph &&
+            paragraph.segments[paragraph.segments.length - 1];
+
+        if (
+            lastSegment &&
+            lastSegment.type == ContentModel_SegmentType.Text &&
+            lastSegment.isSelected == context.isInSelection &&
+            areSameFormats(lastSegment.format, context.segmentFormat)
+        ) {
+            lastSegment.text += text;
+        } else {
+            const originalSegmentFormat = context.segmentFormat;
+
+            context.segmentFormat = { ...originalSegmentFormat };
+            addSegment(group, context, createText(context, text));
+            context.segmentFormat = originalSegmentFormat;
+        }
+    }
+}
+
+function addSegment(
+    group: ContentModel_BlockGroup,
+    context: FormatContext,
+    newSegment: ContentModel_Segment
+) {
+    const lastBlock = group.blocks[group.blocks.length - 1];
+    let paragraph: ContentModel_Paragraph;
+
+    if (lastBlock?.blockType == ContentModel_BlockType.Paragraph) {
+        paragraph = lastBlock;
+    } else {
+        paragraph = createParagraph(context);
+        addBlock(group, paragraph);
     }
 
-    // return lastBlock;
-
-    // if (!/^[\r\n]*$/.test(nodeValue)) {
-    // } else if (lastSegment.text) {
-    //     lastSegment.text += ' ';
-    // }
-}
-
-function getOrAddParagraph(
-    group: ContentModel_BlockGroup,
-    context: FormatContext
-): ContentModel_Paragraph {
-    const lastBlock = group.blocks[group.blocks.length - 1];
-
-    return lastBlock?.blockType == ContentModel_BlockType.Paragraph
-        ? lastBlock
-        : addParagraph(group, context);
-}
-
-function getOrAddTextSegment(
-    paragraph: ContentModel_Paragraph,
-    context: FormatContext
-): ContentModel_Text {
     const lastSegment = paragraph.segments[paragraph.segments.length - 1];
-    return lastSegment?.type == ContentModel_SegmentType.Text
-        ? lastSegment
-        : addTextSegment(paragraph, context);
+
+    if (newSegment.type == ContentModel_SegmentType.SelectionMarker) {
+        if (!lastSegment || !lastSegment.isSelected) {
+            paragraph.segments.push(newSegment);
+        }
+    } else {
+        if (
+            newSegment.isSelected &&
+            lastSegment?.type == ContentModel_SegmentType.SelectionMarker
+        ) {
+            paragraph.segments.pop();
+        }
+
+        paragraph.segments.push(newSegment);
+    }
 }
 
-function addParagraph(
-    group: ContentModel_BlockGroup,
-    context: FormatContext
-): ContentModel_Paragraph {
-    const blockFormat = {
-        ...context.blockFormat,
-    };
-    const paragraph: ContentModel_Paragraph = {
-        blockType: ContentModel_BlockType.Paragraph,
-        segments: [],
-        format: blockFormat,
-    };
-
-    group.blocks.push(paragraph);
-
-    return paragraph;
-}
-
-function addTextSegment(
-    paragraph: ContentModel_Paragraph,
-    context: FormatContext
-): ContentModel_Text {
-    const segmentFormat = { ...context.segmentFormat };
-    const newSegment: ContentModel_Text = {
-        type: ContentModel_SegmentType.Text,
-        text: '',
-        format: segmentFormat,
-        isSelected: context.isInSelection,
-    };
-
-    paragraph.segments.push(newSegment);
-
-    return newSegment;
+function addBlock(group: ContentModel_BlockGroup, block: ContentModel_Block) {
+    group.blocks.push(block);
 }

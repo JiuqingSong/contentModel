@@ -136,6 +136,10 @@ function createSegmentFromContent(
     segment: ContentModel_Segment,
     info: SelectionInfo
 ) {
+    if (!info.start && segment.isSelected) {
+        info.start = getSelectionPosition(info.context);
+    }
+
     if (info.start && !info.end && !segment.isSelected) {
         info.end = getSelectionPosition(info.context);
     }
@@ -159,10 +163,6 @@ function createSegmentFromContent(
             element = doc.createElement('br');
             info.context.currentSegmentNode = element;
             break;
-    }
-
-    if (!info.start && segment.isSelected) {
-        info.start = getSelectionPosition(info.context);
     }
 
     if (element) {

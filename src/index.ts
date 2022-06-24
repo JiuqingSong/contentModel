@@ -71,9 +71,7 @@ function bold() {
     const model = updateContentModel(modelLayoutEl);
     const segments = getSelectedSegments(model);
     // const segments = model.getSelectedSegments();
-    const toUnbold = segments.every(
-        seg => seg.type == ContentModel_SegmentType.SelectionMarker || seg.format.bold
-    );
+    const toUnbold = segments.every(seg => seg.format.bold);
 
     segments.forEach(seg => (seg.format.bold = !toUnbold));
 
@@ -84,9 +82,7 @@ function italic() {
     const model = updateContentModel(modelLayoutEl);
     const segments = getSelectedSegments(model);
     // const segments = model.getSelectedSegments();
-    const toUnitalic = segments.every(
-        seg => seg.type == ContentModel_SegmentType.SelectionMarker || seg.format.italic
-    );
+    const toUnitalic = segments.every(seg => seg.format.italic);
 
     segments.forEach(seg => (seg.format.italic = !toUnitalic));
 
@@ -97,9 +93,7 @@ function underline() {
     const model = updateContentModel(modelLayoutEl);
     const segments = getSelectedSegments(model);
     // const segments = model.getSelectedSegments();
-    const toUnunderline = segments.every(
-        seg => seg.type == ContentModel_SegmentType.SelectionMarker || seg.format.underline
-    );
+    const toUnunderline = segments.every(seg => seg.format.underline);
     segments.forEach(seg => (seg.format.underline = !toUnunderline));
     updateResult(model, true);
 }
