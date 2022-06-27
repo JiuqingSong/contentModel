@@ -83,7 +83,7 @@ function normalizeModel(group: ContentModel_BlockGroup) {
 
 function isEmptySegment(segment: ContentModel_Segment) {
     return (
-        segment.type == ContentModel_SegmentType.Text &&
+        segment.segmentType == ContentModel_SegmentType.Text &&
         (!segment.text || /^[\r\n]*$/.test(segment.text))
     );
 }

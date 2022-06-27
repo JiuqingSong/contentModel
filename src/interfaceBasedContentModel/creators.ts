@@ -16,7 +16,7 @@ import {
 
 export function createSelectionMarker(context: FormatContext): ContentModel_SelectionMarker {
     return {
-        type: ContentModel_SegmentType.SelectionMarker,
+        segmentType: ContentModel_SegmentType.SelectionMarker,
         isSelected: true,
         format: context.segmentFormat,
     };
@@ -24,7 +24,7 @@ export function createSelectionMarker(context: FormatContext): ContentModel_Sele
 
 export function createBr(context: FormatContext): ContentModel_Br {
     return {
-        type: ContentModel_SegmentType.Br,
+        segmentType: ContentModel_SegmentType.Br,
         format: {},
         isSelected: context.isInSelection,
     };
@@ -32,7 +32,7 @@ export function createBr(context: FormatContext): ContentModel_Br {
 
 export function createImage(context: FormatContext, img: HTMLImageElement): ContentModel_Image {
     return {
-        type: ContentModel_SegmentType.Image,
+        segmentType: ContentModel_SegmentType.Image,
         format: context.segmentFormat,
         src: img.src,
         isSelected: context.isInSelection,
@@ -41,7 +41,7 @@ export function createImage(context: FormatContext, img: HTMLImageElement): Cont
 
 export function createText(context: FormatContext, text: string): ContentModel_Text {
     return {
-        type: ContentModel_SegmentType.Text,
+        segmentType: ContentModel_SegmentType.Text,
         text: text,
         format: context.segmentFormat,
         isSelected: context.isInSelection,

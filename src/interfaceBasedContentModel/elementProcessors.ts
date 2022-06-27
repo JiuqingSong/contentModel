@@ -248,7 +248,7 @@ function textProcessor(group: ContentModel_BlockGroup, text: string, context: Fo
 
         if (
             lastSegment &&
-            lastSegment.type == ContentModel_SegmentType.Text &&
+            lastSegment.segmentType == ContentModel_SegmentType.Text &&
             lastSegment.isSelected == context.isInSelection &&
             areSameFormats(lastSegment.format, context.segmentFormat)
         ) {
@@ -280,14 +280,14 @@ function addSegment(
 
     const lastSegment = paragraph.segments[paragraph.segments.length - 1];
 
-    if (newSegment.type == ContentModel_SegmentType.SelectionMarker) {
+    if (newSegment.segmentType == ContentModel_SegmentType.SelectionMarker) {
         if (!lastSegment || !lastSegment.isSelected) {
             paragraph.segments.push(newSegment);
         }
     } else {
         if (
             newSegment.isSelected &&
-            lastSegment?.type == ContentModel_SegmentType.SelectionMarker
+            lastSegment?.segmentType == ContentModel_SegmentType.SelectionMarker
         ) {
             paragraph.segments.pop();
         }

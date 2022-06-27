@@ -146,7 +146,7 @@ function createSegmentFromContent(
 
     let element: HTMLElement;
 
-    switch (segment.type) {
+    switch (segment.segmentType) {
         case ContentModel_SegmentType.Image:
             element = doc.createElement('img');
             element.setAttribute('src', segment.src);

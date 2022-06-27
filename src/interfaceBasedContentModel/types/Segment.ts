@@ -9,7 +9,7 @@ export const enum ContentModel_SegmentType {
 }
 
 export interface ContentModel_SegmentBase<T extends ContentModel_SegmentType> {
-    type: T;
+    segmentType: T;
     format: ContentModel_SegmentFormat;
     isSelected: boolean;
 }
