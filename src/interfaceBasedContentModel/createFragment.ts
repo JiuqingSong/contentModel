@@ -208,7 +208,7 @@ function indexOf(node: Node): number {
     return index;
 }
 
-const OptimizeTags = ['SPAN', 'B', 'I', 'U', 'SUB', 'SUP', 'STRIKE'];
+const OptimizeTags = ['SPAN', 'B', 'EM', 'I', 'U', 'SUB', 'SUP', 'STRIKE', 'S', 'A'];
 
 function optimize(root: Node) {
     for (let child = root.firstChild; child; ) {

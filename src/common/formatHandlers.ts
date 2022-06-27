@@ -301,17 +301,18 @@ const whiteSpaceHandler: ParagraphFormatHandler = {
     },
 };
 
+// Order by frequency, from not common used to common used, for better optimization
 export const SegmentFormatHandlers: SegmentFormatHandler[] = [
+    superOrSubScriptHandler,
+    strikeHandler,
     fontFamilyHandler,
     fontSizeHandler,
+    underlineHandler,
+    italicHandler,
+    boldHandler,
     textColorHandler,
     backColorHandler,
     hyperLinkHandler,
-    boldHandler,
-    italicHandler,
-    underlineHandler,
-    strikeHandler,
-    superOrSubScriptHandler,
 ];
 
 export const ParagraphFormatHandlers: ParagraphFormatHandler[] = [
