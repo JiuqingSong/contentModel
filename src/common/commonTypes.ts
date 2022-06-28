@@ -1,3 +1,5 @@
+import { SelectionPosition } from '../utils/normalizePosition';
+
 export interface ContentModel_SegmentFormat {
     bold?: boolean;
     italic?: boolean;
@@ -25,11 +27,6 @@ export interface ContentModel_ParagraphFormat {
     marginLeft?: string;
     lineHeight?: string;
     whiteSpace?: string;
-}
-
-export interface SelectionPosition {
-    container: Node;
-    offset: number;
 }
 
 export interface SelectionContext {

@@ -16,6 +16,7 @@ export const enum ContentModel_BlockGroupType {
     ListItem,
     TableCell,
     Entity,
+    UnknownBlock,
 }
 
 export interface ContentModel_BlockBase<T extends ContentModel_BlockType> {
@@ -34,6 +35,7 @@ export interface ContentModel_Paragraph
     extends ContentModel_BlockBase<ContentModel_BlockType.Paragraph> {
     format: ContentModel_ParagraphFormat;
     segments: ContentModel_Segment[];
+    isDummy: boolean;
 }
 
 export interface ContentModel_BlockGroupBase<T extends ContentModel_BlockGroupType>
@@ -70,6 +72,11 @@ export interface ContentModel_TableCell
 export interface ContentModel_Entity
     extends ContentModel_BlockGroupBase<ContentModel_BlockGroupType.Entity> {}
 
+export interface ContentModel_UnknownBlock
+    extends ContentModel_BlockGroupBase<ContentModel_BlockGroupType.UnknownBlock> {
+    node: Node;
+}
+
 export type ContentModel_BlockGroup =
     | ContentModel_Document
     | ContentModel_Quote
@@ -77,7 +84,8 @@ export type ContentModel_BlockGroup =
     | ContentModel_Header
     | ContentModel_ListItem
     | ContentModel_TableCell
-    | ContentModel_Entity;
+    | ContentModel_Entity
+    | ContentModel_UnknownBlock;
 
 export type ContentModel_Block =
     | ContentModel_BlockGroup

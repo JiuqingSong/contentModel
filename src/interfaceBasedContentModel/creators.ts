@@ -2,6 +2,7 @@ import { FormatContext } from './elementProcessors';
 import {
     ContentModel_BlockGroupType,
     ContentModel_BlockType,
+    ContentModel_UnknownBlock,
     ContentModel_Paragraph,
     ContentModel_Table,
     ContentModel_TableCell,
@@ -12,6 +13,7 @@ import {
     ContentModel_SegmentType,
     ContentModel_SelectionMarker,
     ContentModel_Text,
+    ContentModel_UnknownSegment,
 } from './types/Segment';
 
 export function createSelectionMarker(context: FormatContext): ContentModel_SelectionMarker {
@@ -70,10 +72,38 @@ export function createTableCell(
     };
 }
 
-export function createParagraph(context: FormatContext): ContentModel_Paragraph {
+export function createParagraph(context: FormatContext, isDummy: boolean): ContentModel_Paragraph {
     return {
         blockType: ContentModel_BlockType.Paragraph,
         segments: [],
         format: context.blockFormat,
+        isDummy,
+    };
+}
+
+export function createUnknownBlockAdapter(
+    context: FormatContext,
+    element: HTMLElement
+): ContentModel_UnknownBlock {
+    return {
+        blockType: ContentModel_BlockType.BlockGroup,
+        blockGroupType: ContentModel_BlockGroupType.UnknownBlock,
+        node: element.cloneNode(),
+        blocks: [],
+    };
+}
+
+export function createUnknownSegmentAdapter(
+    context: FormatContext,
+    element: HTMLElement
+): ContentModel_UnknownSegment {
+    return {
+        segmentType: ContentModel_SegmentType.UnknownSegment,
+        isSelected: context.isInSelection,
+        format: {},
+        blocks: [],
+        node: element.cloneNode(),
+        blockType: ContentModel_BlockType.BlockGroup,
+        blockGroupType: ContentModel_BlockGroupType.UnknownBlock,
     };
 }

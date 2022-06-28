@@ -1,8 +1,10 @@
 import {
+    BlockDisplay,
+    knownBlockProcessor,
     brProcessor,
     ElementProcessor,
-    generalProcessor,
     imageProcessor,
+    knownSegmentProcessor,
     tableProcessor,
     TagHandler,
 } from './elementProcessors';
@@ -33,6 +35,15 @@ function createTagHandler(style: DefaultFormatParserType, processor: ElementProc
         processor,
     };
 }
+
+const generalProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
+    const processor =
+        BlockDisplay.indexOf(element.style.display || defaultStyle.display) >= 0
+            ? knownBlockProcessor
+            : knownSegmentProcessor;
+
+    processor(group, context, element, defaultStyle);
+};
 
 export const TagHandlerMap: Record<string, TagHandler> = {
     A: createTagHandler(inline, generalProcessor),

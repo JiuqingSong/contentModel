@@ -1,7 +1,8 @@
 import isNodeOfType, { NodeType } from '../utils/isNodeOfType';
+import normalizePosition, { SelectionPosition } from '../utils/normalizePosition';
 import { ContentModel_Segment, ContentModel_SegmentType } from './types/Segment';
 import { ParagraphFormatHandlers, SegmentFormatHandlers } from '../common/formatHandlers';
-import { SelectionContext, SelectionInfo, SelectionPosition } from '../common/commonTypes';
+import { SelectionContext, SelectionInfo } from '../common/commonTypes';
 import {
     ContentModel_Block,
     ContentModel_BlockGroupType,
@@ -29,6 +30,13 @@ export default function createFragment(
         info.end = getSelectionPosition(info.context);
     }
 
+    if (info.start?.container?.nodeType == Node.DOCUMENT_FRAGMENT_NODE) {
+        normalizePosition(info.start);
+    }
+    if (info.end?.container?.nodeType == Node.DOCUMENT_FRAGMENT_NODE) {
+        normalizePosition(info.end);
+    }
+
     optimize(fragment);
 
     return [fragment, info.start, info.end];
@@ -52,13 +60,11 @@ function createBlockFromContentModel(
             let newParent = parent;
 
             switch (block.blockGroupType) {
-                case ContentModel_BlockGroupType.Code: // TODO
-                case ContentModel_BlockGroupType.Document: // TODO
-                case ContentModel_BlockGroupType.Entity: // TODO
-                case ContentModel_BlockGroupType.Header: // TODO
-                case ContentModel_BlockGroupType.ListItem: // TODO
-                case ContentModel_BlockGroupType.Quote: // TODO
-                case ContentModel_BlockGroupType.TableCell: // TODO
+                case ContentModel_BlockGroupType.UnknownBlock:
+                    newParent = block.node;
+                    parent.appendChild(newParent);
+                    break;
+                default:
                     break;
             }
 
@@ -79,14 +85,20 @@ function createParagraph(
     paragraph: ContentModel_Paragraph,
     info: SelectionInfo
 ) {
-    const div = doc.createElement('div');
-    parent.appendChild(div);
-    setCurrentBlockElement(info.context, div);
+    let container: HTMLElement;
 
-    ParagraphFormatHandlers.forEach(handler => handler.writeBack(paragraph.format, div));
+    if (paragraph.isDummy) {
+        container = parent as HTMLElement;
+    } else {
+        container = doc.createElement('div');
+        parent.appendChild(container);
+        ParagraphFormatHandlers.forEach(handler => handler.writeBack(paragraph.format, container));
+    }
+
+    setCurrentBlockElement(info.context, container);
 
     paragraph.segments.forEach(segment => {
-        createSegmentFromContent(doc, div, segment, info);
+        createSegmentFromContent(doc, container, segment, info);
     });
 }
 
@@ -162,6 +174,13 @@ function createSegmentFromContent(
         case ContentModel_SegmentType.Br:
             element = doc.createElement('br');
             info.context.currentSegmentNode = element;
+            break;
+
+        case ContentModel_SegmentType.UnknownSegment:
+            element = segment.node as HTMLElement;
+            info.context.currentSegmentNode = element;
+
+            createBlockFromContentModel(doc, parent, segment, info);
             break;
     }
 

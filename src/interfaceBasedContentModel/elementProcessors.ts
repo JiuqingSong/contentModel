@@ -5,11 +5,13 @@ import { ParagraphFormatHandlers, SegmentFormatHandlers } from '../common/format
 import {
     createBr,
     createImage,
+    createUnknownBlockAdapter,
     createParagraph,
     createSelectionMarker,
     createTable,
     createTableCell,
     createText,
+    createUnknownSegmentAdapter,
 } from './creators';
 import {
     areSameFormats,
@@ -24,7 +26,7 @@ import {
 } from './types/Block';
 
 // https://www.w3schools.com/cssref/pr_class_display.asp
-const BlockDisplay = ['block', 'flex', 'grid', 'list-item'];
+export const BlockDisplay = ['block', 'flex', 'grid', 'list-item'];
 
 // const InlineDisplay = [
 //     'inline',
@@ -101,12 +103,16 @@ export function containerProcessor(
 
         if (isNodeOfType(child, NodeType.Element)) {
             const handler = context.tagHandlers[child.tagName];
-            const processor = handler?.processor || generalProcessor;
             const format = handler
                 ? typeof handler.style === 'function'
                     ? handler.style(child)
                     : handler.style
                 : {};
+            const processor =
+                handler?.processor ||
+                (BlockDisplay.indexOf(child.style.display || format.display) >= 0
+                    ? unknownBlockProcessor
+                    : unknownSegmentProcessor);
 
             processor(group, context, child, format || {});
         } else if (isNodeOfType(child, NodeType.Text)) {
@@ -143,15 +149,6 @@ export function containerProcessor(
         index++;
     }
 }
-
-export const generalProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
-    const processor =
-        BlockDisplay.indexOf(element.style.display || defaultStyle.display) >= 0
-            ? blockProcessor
-            : segmentProcessor;
-
-    processor(group, context, element, defaultStyle);
-};
 
 export const brProcessor: ElementProcessor = (group, context) => {
     addSegment(group, context, createBr(context));
@@ -201,7 +198,34 @@ export const imageProcessor: ElementProcessor = (group, context, element, defaul
     context.segmentFormat = originalSegmentFormat;
 };
 
-const blockProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
+const unknownBlockProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
+    const block = createUnknownBlockAdapter(context, element);
+    const originalBlockFormat = context.blockFormat;
+    const originalSegmentFormat = context.segmentFormat;
+
+    context.blockFormat = {};
+    context.segmentFormat = {};
+
+    addBlock(group, block);
+    containerProcessor(block, element, context);
+
+    context.blockFormat = originalBlockFormat;
+    context.segmentFormat = originalSegmentFormat;
+};
+
+const unknownSegmentProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
+    const segment = createUnknownSegmentAdapter(context, element);
+    const originalSegmentFormat = context.segmentFormat;
+
+    context.segmentFormat = {};
+
+    addSegment(group, context, segment);
+    containerProcessor(segment, element, context);
+
+    context.segmentFormat = originalSegmentFormat;
+};
+
+export const knownBlockProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
     const originalBlockFormat = context.blockFormat;
     const originalSegmentFormat = context.segmentFormat;
 
@@ -217,16 +241,16 @@ const blockProcessor: ElementProcessor = (group, context, element, defaultStyle)
         handler.parse(context.segmentFormat, element, defaultStyle)
     );
 
-    addBlock(group, createParagraph(context));
+    addBlock(group, createParagraph(context, false));
 
     containerProcessor(group, element, context);
     context.blockFormat = originalBlockFormat;
     context.segmentFormat = originalSegmentFormat;
 
-    addBlock(group, createParagraph(context));
+    addBlock(group, createParagraph(context, false));
 };
 
-const segmentProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
+export const knownSegmentProcessor: ElementProcessor = (group, context, element, defaultStyle) => {
     const originalSegmentFormat = context.segmentFormat;
 
     context.segmentFormat = { ...originalSegmentFormat };
@@ -274,7 +298,7 @@ function addSegment(
     if (lastBlock?.blockType == ContentModel_BlockType.Paragraph) {
         paragraph = lastBlock;
     } else {
-        paragraph = createParagraph(context);
+        paragraph = createParagraph(context, true);
         addBlock(group, paragraph);
     }
 
