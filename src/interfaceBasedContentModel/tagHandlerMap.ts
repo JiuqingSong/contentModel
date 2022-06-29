@@ -55,7 +55,7 @@ export const TagHandlerMap: Record<string, TagHandler> = {
     BLOCKQUOTE: createTagHandler(blockquote, generalProcessor), // TODO
     BR: createTagHandler(block, brProcessor),
     CENTER: createTagHandler(center, generalProcessor),
-    CODE: createTagHandler(block, generalProcessor), // TODO
+    CODE: createTagHandler(inline, generalProcessor), // TODO
     DIV: createTagHandler(block, generalProcessor),
     DD: createTagHandler(dd, generalProcessor), // TODO
     DL: createTagHandler(dl, generalProcessor), // TODO

@@ -94,14 +94,13 @@ const hyperLinkHandler: SegmentFormatHandler = {
         }
     },
     writeBack: (format, element) => {
-        if (format.linkHref) {
-            const a = wrap(element, 'A') as HTMLAnchorElement;
-            a.href = format.linkHref;
-
-            if (format.linkTarget) {
-                a.target = format.linkTarget;
-            }
-        }
+        // if (format.linkHref) {
+        //     const a = wrap(element, 'A') as HTMLAnchorElement;
+        //     a.href = format.linkHref;
+        //     if (format.linkTarget) {
+        //         a.target = format.linkTarget;
+        //     }
+        // }
     },
 };
 

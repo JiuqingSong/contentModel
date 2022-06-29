@@ -166,7 +166,14 @@ function createSegmentFromContent(
             break;
         case ContentModel_SegmentType.Text:
             const txt = doc.createTextNode(segment.text);
-            element = doc.createElement('span');
+
+            if (segment.format.linkHref) {
+                element = doc.createElement('a');
+                element.setAttribute('href', segment.format.linkHref);
+                element.setAttribute('target', segment.format.linkTarget);
+            } else {
+                element = doc.createElement('span');
+            }
             element.appendChild(txt);
             info.context.currentSegmentNode = txt;
             break;
