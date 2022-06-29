@@ -1,6 +1,8 @@
 const path = require('path');
 const devServerPort = 4000;
 
+const isDebugging = false;
+
 module.exports = {
     entry: path.join(__dirname, './src/index.ts'),
     devtool: 'source-map',
@@ -14,7 +16,7 @@ module.exports = {
         extensions: ['.ts', '.js'],
         modules: ['./src', './node_modules'],
     },
-    mode: 'development',
+    mode: isDebugging ? 'development' : 'production',
     module: {
         rules: [
             {
@@ -24,7 +26,7 @@ module.exports = {
         ],
     },
     optimization: {
-        minimize: false,
+        minimize: !isDebugging,
     },
     watch: true,
     stats: 'minimal',
