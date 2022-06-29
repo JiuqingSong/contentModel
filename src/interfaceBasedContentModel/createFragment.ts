@@ -14,7 +14,8 @@ import {
 
 export default function createFragment(
     doc: Document,
-    model: ContentModel_Document
+    model: ContentModel_Document,
+    optimizeLevel: number
 ): [DocumentFragment, SelectionPosition, SelectionPosition] {
     const fragment = doc.createDocumentFragment();
     const info: SelectionInfo = {
@@ -37,7 +38,7 @@ export default function createFragment(
         normalizePosition(info.end);
     }
 
-    optimize(fragment);
+    optimize(fragment, optimizeLevel);
 
     return [fragment, info.start, info.end];
 }
@@ -236,52 +237,56 @@ function indexOf(node: Node): number {
 
 const OptimizeTags = ['SPAN', 'B', 'EM', 'I', 'U', 'SUB', 'SUP', 'STRIKE', 'S', 'A'];
 
-function optimize(root: Node) {
-    for (let child = root.firstChild; child; ) {
-        const next = child.nextSibling;
+function optimize(root: Node, optimizeLevel: number) {
+    if (optimizeLevel >= 1) {
+        for (let child = root.firstChild; child; ) {
+            const next = child.nextSibling;
 
-        if (
-            next &&
-            isNodeOfType(child, NodeType.Element) &&
-            isNodeOfType(next, NodeType.Element) &&
-            child.tagName == next.tagName &&
-            OptimizeTags.indexOf(child.tagName) >= 0 &&
-            hasSameAttributes(child, next)
-        ) {
-            while (next.firstChild) {
-                child.appendChild(next.firstChild);
+            if (
+                next &&
+                isNodeOfType(child, NodeType.Element) &&
+                isNodeOfType(next, NodeType.Element) &&
+                child.tagName == next.tagName &&
+                OptimizeTags.indexOf(child.tagName) >= 0 &&
+                hasSameAttributes(child, next)
+            ) {
+                while (next.firstChild) {
+                    child.appendChild(next.firstChild);
+                }
+
+                next.parentNode.removeChild(next);
+            } else {
+                child = next;
             }
-
-            next.parentNode.removeChild(next);
-        } else {
-            child = next;
         }
     }
 
-    for (let child = root.firstChild; child; ) {
-        if (
-            isNodeOfType(child, NodeType.Element) &&
-            child.tagName == 'SPAN' &&
-            child.attributes.length == 0
-        ) {
-            const node = child;
-            let refNode = child.nextSibling;
-            child = child.nextSibling;
+    if (optimizeLevel >= 2) {
+        for (let child = root.firstChild; child; ) {
+            if (
+                isNodeOfType(child, NodeType.Element) &&
+                child.tagName == 'SPAN' &&
+                child.attributes.length == 0
+            ) {
+                const node = child;
+                let refNode = child.nextSibling;
+                child = child.nextSibling;
 
-            while (node.lastChild) {
-                const newNode = node.lastChild;
-                root.insertBefore(newNode, refNode);
-                refNode = newNode;
+                while (node.lastChild) {
+                    const newNode = node.lastChild;
+                    root.insertBefore(newNode, refNode);
+                    refNode = newNode;
+                }
+
+                root.removeChild(node);
+            } else {
+                child = child.nextSibling;
             }
-
-            root.removeChild(node);
-        } else {
-            child = child.nextSibling;
         }
     }
 
     for (let child = root.firstChild; child; child = child.nextSibling) {
-        optimize(child);
+        optimize(child, optimizeLevel);
     }
 }
 

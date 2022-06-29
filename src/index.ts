@@ -3,7 +3,6 @@ import createFragment from './interfaceBasedContentModel/createFragment';
 import createInterfaceBasedContentModel from './interfaceBasedContentModel/createContentModel';
 import getSelectedSegments from './interfaceBasedContentModel/getSelectedSegments';
 import { ContentModel_Document } from './interfaceBasedContentModel/types/Block';
-import { ContentModel_SegmentType } from './interfaceBasedContentModel/types/Segment';
 
 const sourceEl = document.getElementById('source') as HTMLTextAreaElement;
 const layoutEl = document.getElementById('layout') as HTMLDivElement;
@@ -16,7 +15,23 @@ const btnItalic = document.getElementById('btnItalic') as HTMLButtonElement;
 const btnUnderline = document.getElementById('btnUnderline') as HTMLButtonElement;
 const btnPerf = document.getElementById('btnPerf') as HTMLButtonElement;
 
-sourceEl.textContent = '<table><tr><td>1</td></tr></table>';
+const optNo = document.getElementById('optNo');
+const opt1 = document.getElementById('opt1');
+const opt2 = document.getElementById('opt2');
+
+let optimizeLevel = 2;
+
+// sourceEl.textContent = '';
+
+optNo.addEventListener('click', () => {
+    setOptimizationLevel(0);
+});
+opt1.addEventListener('click', () => {
+    setOptimizationLevel(1);
+});
+opt2.addEventListener('click', () => {
+    setOptimizationLevel(2);
+});
 
 sourceEl.addEventListener('input', updateLayout);
 btnBold.addEventListener('click', bold);
@@ -27,6 +42,14 @@ btnUnderline.addEventListener('click', underline);
 document.addEventListener('selectionchange', () => {
     updateContentModel(modelLayoutEl);
 });
+
+function setOptimizationLevel(level: number) {
+    optimizeLevel = level;
+
+    const model = updateContentModel(modelLayoutEl);
+
+    updateResult(model, false);
+}
 
 function updateLayout() {
     const html = sourceEl.value;
@@ -50,7 +73,7 @@ function updateContentModel(source: Node) {
 function updateResult(model: ContentModel_Document, updateSelection: boolean) {
     modelLayoutEl.innerHTML = '';
 
-    const [fragment, start, end] = createFragment(document, model);
+    const [fragment, start, end] = createFragment(document, model, optimizeLevel);
     modelLayoutEl.appendChild(fragment);
     modelHtmlEl.value = modelLayoutEl.innerHTML;
 

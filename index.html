@@ -87,7 +87,15 @@
                         contenteditable=""
                         spellcheck="false"
                     ></div>
-                    <div>HTML from content model:</div>
+                    <div>
+                        HTML from content model: Optimization:
+                        <input type="radio" name="opt" id="optNo" />
+                        <label for="optNo">No optimization</label>
+                        <input type="radio" name="opt" id="opt1" />
+                        <label for="opt1">Level 1: Merge same tag</label>
+                        <input type="radio" name="opt" id="opt2" checked />
+                        <label for="opt2">Level 2: Remove empty SPAN</label>
+                    </div>
                     <div style="flex-grow: 0; height: 250px">
                         <textarea id="modelHTML" style="width: 100%; height: 100%"></textarea>
                     </div>
