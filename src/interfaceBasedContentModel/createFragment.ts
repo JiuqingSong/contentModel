@@ -112,15 +112,18 @@ function createTable(doc: Document, parent: Node, table: ContentModel_Table, inf
     const tableNode = doc.createElement('table');
     parent.appendChild(tableNode);
 
+    const tbody = doc.createElement('tbody');
+    tableNode.appendChild(tbody);
+
     for (let row = 0; row < table.cells.length; row++) {
         const tr = doc.createElement('tr');
-        tableNode.appendChild(tr);
+        tbody.appendChild(tr);
 
         for (let col = 0; col < table.cells[row].length; col++) {
             const cell = table.cells[row][col];
 
             if (!cell.spanAbove && !cell.spanLeft) {
-                const td = doc.createElement('td');
+                const td = doc.createElement(cell.isHeader ? 'th' : 'td');
                 tr.appendChild(td);
 
                 let rowSpan = 1;

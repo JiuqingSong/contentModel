@@ -25,29 +25,44 @@ export function createSelectionMarker(context: FormatContext): ContentModel_Sele
 }
 
 export function createBr(context: FormatContext): ContentModel_Br {
-    return {
+    const result: ContentModel_Br = {
         segmentType: ContentModel_SegmentType.Br,
         format: {},
-        isSelected: context.isInSelection,
     };
+
+    if (context.isInSelection) {
+        result.isSelected = true;
+    }
+
+    return result;
 }
 
 export function createImage(context: FormatContext, img: HTMLImageElement): ContentModel_Image {
-    return {
+    const result: ContentModel_Image = {
         segmentType: ContentModel_SegmentType.Image,
         format: context.segmentFormat,
         src: img.src,
-        isSelected: context.isInSelection,
     };
+
+    if (context.isInSelection) {
+        result.isSelected = true;
+    }
+
+    return result;
 }
 
 export function createText(context: FormatContext, text: string): ContentModel_Text {
-    return {
+    const result: ContentModel_Text = {
         segmentType: ContentModel_SegmentType.Text,
         text: text,
         format: context.segmentFormat,
-        isSelected: context.isInSelection,
     };
+
+    if (context.isInSelection) {
+        result.isSelected = true;
+    }
+
+    return result;
 }
 
 export function createTable(context: FormatContext, table: HTMLTableElement): ContentModel_Table {
@@ -60,7 +75,8 @@ export function createTable(context: FormatContext, table: HTMLTableElement): Co
 export function createTableCell(
     context: FormatContext,
     colSpan: number,
-    rowSpan: number
+    rowSpan: number,
+    isHeader: boolean
 ): ContentModel_TableCell {
     return {
         blockGroupType: ContentModel_BlockGroupType.TableCell,
@@ -69,6 +85,7 @@ export function createTableCell(
         // td: hasTd ? td : null,
         spanLeft: colSpan > 0,
         spanAbove: rowSpan > 0,
+        isHeader,
     };
 }
 
@@ -97,13 +114,18 @@ export function createUnknownSegmentAdapter(
     context: FormatContext,
     element: HTMLElement
 ): ContentModel_UnknownSegment {
-    return {
+    const result: ContentModel_UnknownSegment = {
         segmentType: ContentModel_SegmentType.UnknownSegment,
-        isSelected: context.isInSelection,
         format: {},
         blocks: [],
         node: element.cloneNode(),
         blockType: ContentModel_BlockType.BlockGroup,
         blockGroupType: ContentModel_BlockGroupType.UnknownBlock,
     };
+
+    if (context.isInSelection) {
+        result.isSelected = true;
+    }
+
+    return result;
 }

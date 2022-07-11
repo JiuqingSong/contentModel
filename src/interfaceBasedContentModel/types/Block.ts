@@ -67,6 +67,7 @@ export interface ContentModel_TableCell
     extends ContentModel_BlockGroupBase<ContentModel_BlockGroupType.TableCell> {
     spanLeft: boolean;
     spanAbove: boolean;
+    isHeader?: boolean;
 }
 
 export interface ContentModel_Entity

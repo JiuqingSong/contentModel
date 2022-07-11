@@ -1,11 +1,5 @@
 import { ContentModel_SegmentFormat } from '../../common/commonTypes';
-import {
-    ContentModel_Block,
-    ContentModel_BlockGroup,
-    ContentModel_BlockGroupBase,
-    ContentModel_BlockGroupType,
-    ContentModel_UnknownBlock,
-} from './Block';
+import { ContentModel_UnknownBlock } from './Block';
 
 export const enum ContentModel_SegmentType {
     Text,
@@ -19,7 +13,7 @@ export const enum ContentModel_SegmentType {
 export interface ContentModel_SegmentBase<T extends ContentModel_SegmentType> {
     segmentType: T;
     format: ContentModel_SegmentFormat;
-    isSelected: boolean;
+    isSelected?: boolean;
 }
 
 export interface ContentModel_SelectionMarker

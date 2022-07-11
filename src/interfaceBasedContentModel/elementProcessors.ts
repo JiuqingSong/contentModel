@@ -170,7 +170,7 @@ export const tableProcessor: ElementProcessor = (group, context, element) => {
             for (let colSpan = 0; colSpan < td.colSpan; colSpan++, targetCol++) {
                 for (let rowSpan = 0; rowSpan < td.rowSpan; rowSpan++) {
                     const hasTd = colSpan + rowSpan == 0;
-                    const cell = createTableCell(context, colSpan, rowSpan);
+                    const cell = createTableCell(context, colSpan, rowSpan, td.tagName == 'TH');
 
                     table.cells[row + rowSpan][targetCol] = cell;
 
